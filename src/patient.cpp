@@ -1,6 +1,7 @@
 #include "../headers/Patient.h"
 #include <iostream>
 #include <vector>
+#include <filesystem>
 #include <fstream>
 
 using namespace std;
@@ -32,4 +33,33 @@ void registerPatient(vector<Patient> patients) {
     outFile.close();
 
     cout << "Data Saved";
+}
+
+void loginPatient(vector<Patient> patients) {
+
+}
+
+vector<Patient> loadPatients() {
+    ifstream inFile("data/patients.txt");
+
+    while (inFile.is_open()) {
+
+    }
+
+    vector<Patient> p;
+    return p;
+}
+
+void savePatients(vector<Patient> patients) {
+    filesystem::create_directories("data"); // create data folder to store all text files if folder doesn't exist
+
+    ofstream outFile("data/patients.txt");
+
+    for (Patient patient : patients) {
+        // code here
+    }
+}
+
+void createPatient(Patient patient, vector<Patient> patients) {
+
 }
