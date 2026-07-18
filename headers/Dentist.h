@@ -12,6 +12,8 @@ struct Dentist {
     int age;
     char gender;
     string nric;
+    string phoneNo;
+    string email;
 };
 
 void registerDentist(vector<Dentist> dentists);
