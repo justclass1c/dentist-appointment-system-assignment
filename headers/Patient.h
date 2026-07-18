@@ -18,9 +18,9 @@ struct Patient {
 
 // declare functions here, then implement them in their respective cpp files
 Patient inputPatientDetails(string id);
-void registerPatient(vector<Patient> patients);
-void loginPatient(vector<Patient> patients);
-void viewPatients(vector<Patient> patients);
-void createPatient(Patient patient, vector<Patient> patients);
+void registerPatient(vector<Patient>& patients);
+void loginPatient(vector<Patient>& patients);
+void viewPatients(vector<Patient>& patients);
+void createPatient(Patient patient, vector<Patient>& patients);
 void savePatients(vector<Patient> patients);
 #endif

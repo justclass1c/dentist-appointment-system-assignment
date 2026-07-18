@@ -11,20 +11,6 @@ using namespace std;
 vector<Patient> patients = loadPatients();
 vector<Dentist> dentists;
 
-void patientInfo() {
-    // idea: can prompt input and store in that array,
-    // then open file and compare with the data inside the file
-    // if got the data, proceed , if not go back main menu
-}
-
-void dentistInfo() {
-    cout << "nah bro";
-}
-
-void receptionInfo() {
-    cout << "nah sis";
-}
-
 int main() {
     int choiceForMainPage;
     cout << "Welcome to Dentist Sdn. Bhd." << endl;
@@ -36,18 +22,20 @@ int main() {
 
     while (true) {
         cin >> choiceForMainPage;
+        cin.ignore();
 
         if (choiceForMainPage == 1) {
             loginPatient(patients);
             break;
         } else if (choiceForMainPage == 2) {
-            dentistInfo();
+            // pending
             break;
         } else if (choiceForMainPage == 3) {
-            receptionInfo();
+            // pending
             break;
         } else if (choiceForMainPage == 4) {
             registerPatient(patients);
+            main();
         } else cout << "Invalid choice, pls try again: ";
         break;
     }
