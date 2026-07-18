@@ -8,31 +8,31 @@ using namespace std;
 
 void registerPatient(vector<Patient> patients) {
     char choice;
+    Patient p;
 
     do {
-        Patient p;
         cout << "Name: ";
-        cin >> p.name;
+        getline(cin, p.name);
+        cout << "Age: ";
+        cin >> p.age;
+        cout << "Gender (M/F): ";
+        cin >> p.gender;
         cout << "NRIC: ";
         cin >> p.nric;
+        cout << "Email: ";
+        cin >> p.email;
         cout << "Phone Number: ";
-        cin >> p.phoneNo;//more info type yourself
+        getline(cin, p.phoneNo);
+        cout << "Allergies: ";
+        getline(cin, p.allergies);
 
         patients.push_back(p);
-
         cin.ignore();
+
     } while (choice == 'y' || choice == 'Y');
-
-    ofstream outFile("C:/Users/user/Desktop/dentist assignment/patients.txt", ios::app); //write in .txt file
                                                                                          //
-    for (const auto& p : patients) {
-        outFile << p.name << "," << p.nric << "," << p.phoneNo << endl;
-    }
+    savePatients(patients);
 
-    outFile << "Hi" << endl;
-    outFile.close();
-
-    cout << "Data Saved";
 }
 
 void loginPatient(vector<Patient> patients) {
@@ -56,10 +56,10 @@ void savePatients(vector<Patient> patients) {
     ofstream outFile("data/patients.txt");
 
     for (Patient patient : patients) {
+        outFile << patient.name << ";" << patient.nric << ";" << patient.phoneNo << endl;
         // code here
     }
+
+    outFile.close();
 }
 
-void createPatient(Patient patient, vector<Patient> patients) {
-
-}
