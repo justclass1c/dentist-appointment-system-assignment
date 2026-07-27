@@ -6,7 +6,8 @@
 
 using namespace std;
 
-bool validateAge(string input);
+bool validateName(string input);
+bool validatePatientAge(int input);
 bool validateGender(char input);
 bool validateNRIC(string input);
 bool validateEmail(string input);

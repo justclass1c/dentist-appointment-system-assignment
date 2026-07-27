@@ -1,4 +1,6 @@
 #include "../headers/Patient.h"
+#include "../headers/Validation.h"
+#include "../src/validation.cpp"
 #include <iostream>
 #include <vector>
 #include <filesystem>
@@ -8,27 +10,40 @@ using namespace std;
 
 void registerPatient(vector<Patient>& patients) {
     char choice;
+    string tmp;
     Patient p;
 
     do {
+        
         cout << "Name: ";
         getline(cin, p.name);
 
-        cout << "Age: ";
-        cin >> p.age;
+        while (!validatePatientAge(p.age)) {
+            cout << "Age: ";
+            cin >> p.age;
+        }
 
-        cout << "Gender (M/F): ";
-        cin >> p.gender;
+        do {
+            cout << "Gender (M/F): ";
+            cin >> p.gender;
+        } while (!validateGender(toupper(p.gender)));
 
-        cout << "NRIC: ";
-        cin >> p.nric;
+        do {
+            cout << "NRIC: ";
+            cin >> p.nric;
+        } while (!validateNRIC(p.nric));
 
-        cout << "Email: ";
-        cin >> p.email;
-        cin.ignore();
+        do {
+            cout << "Email: ";
+            cin >> p.email;
+            cin.ignore();
+        } while (!validateEmail(p.email));
 
-        cout << "Phone Number: ";
-        getline(cin, p.phoneNo);
+        do {
+            cout << "Phone Number: ";
+            getline(cin, p.phoneNo);
+        } while (!validatePhoneNo(p.phoneNo));
+
 
         cout << "Allergies: ";
         getline(cin, p.allergies);
@@ -36,12 +51,27 @@ void registerPatient(vector<Patient>& patients) {
         patients.push_back(p);
 
     } while (choice == 'y' || choice == 'Y');
-                                                                                         //
+
+    cout << "Your Profile (Patient ID: P" << patients.size() + 1 <<")";
+    cout << "Name: " << p.name << endl;
+    cout << "Age: " << p.age << endl;
+    cout << "Gender: " << p.gender << endl;
+    cout << "NRIC: " << p.nric << endl;
+    cout << "Email: " << p.email << endl;
+    cout << "Phone No.: " << p.phoneNo << endl;
+    cout << "Allergies: " << p.allergies << endl;
+    cout << "Confirm registration?" << endl;
+
+    cout << "(Y = Yes / N = No / M = Nodify): ";
     savePatients(patients);
 
 }
 
 void loginPatient(vector<Patient>& patients) {
+
+}
+
+void modifyPatient(vector<Patient>& patients) {
 
 }
 
