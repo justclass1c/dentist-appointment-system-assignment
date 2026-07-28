@@ -1,3 +1,0 @@
-D001,Dr.Smith,45,smith@clinic.com,pass123
-D002,Tan,20,abc@def.com,qwertyuiop
-D003,Wong,25,Wong@we.com,qwertyuiop
