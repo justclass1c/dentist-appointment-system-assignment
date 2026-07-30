@@ -146,12 +146,12 @@ void displayDentistInfo(const Dentist& d) {
 
 void displaySlots(const vector<TimeSlot>& slotList) {
     if (slotList.empty()) {
-        cout << "No time slots.\n";
+        //cout << "No time slots.\n";
         return;
     }
-    cout << "Start\tEnd\tStatus\n";
+    cout << "Dentist ID\tStart\tEnd\tStatus\n";
     for (const auto& s : slotList) {
-        cout << s.start << "\t" << s.end << "\t"
+        cout << s.dentistId << "\t\t" << s.start << "\t" << s.end << "\t"
              << (s.available ? "Available" : "Locked") << "\n";
     }
 }
@@ -256,8 +256,7 @@ void adminPanel() {
 // ========================== Reception Menu ==========================
 
 void receptionViewAllSchedules() {
-    for (const auto& d : dentists) {
-        cout << "\n--- Dentist: " << d.name << " (ID: " << d.id << ") ---\n";
+    for (const Dentist& d : dentists) {
         vector<TimeSlot> ds = getSlotsForDentist(d.id);
         displaySlots(ds);
     }
