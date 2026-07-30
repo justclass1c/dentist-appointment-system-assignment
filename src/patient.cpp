@@ -37,7 +37,7 @@ void registerPatient(vector<Patient>& patients) {
             cout << "Email: ";
             cin >> p.email;
             cin.ignore();
-        } while (!validateEmail(p.email));
+        } while (!validateEmail(p));
 
         do {
             cout << "Phone Number: ";

@@ -30,10 +30,11 @@ bool validateNRIC(string input) {
     return regex_match(input, nricFormat);
 }
 
-bool validateEmail(string input) {
-    const regex emailFormat(R"(^\w+@\w+.com)"); // upgrade to adapt to broader format
-    return regex_match(input, emailFormat);
-};
+template<typename T>
+bool validateEmail(const T& user) {
+    const regex emailFormat(R"(^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$)");
+    return regex_match(user.email, emailFormat);
+}
 
 bool validatePhoneNo(string input) {
     const regex phoneNoFormat(R"(^01\d-\d{3,4} \d{4}$)");
