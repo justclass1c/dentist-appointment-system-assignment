@@ -68,7 +68,17 @@ void registerPatient(vector<Patient>& patients) {
 }
 
 void loginPatient(vector<Patient>& patients) {
+    string email, password;
 
+    cout << "Please login." << endl;
+    
+    do {
+
+    } while (!verifyEmail());
+    cout << "Email: ";
+    cin >> email;
+
+    
 }
 
 void modifyPatient(vector<Patient>& patients) {
