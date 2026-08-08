@@ -146,7 +146,6 @@ void displayDentistInfo(const Dentist& d) {
 
 void displaySlots(const vector<TimeSlot>& slotList) {
     if (slotList.empty()) {
-        //cout << "No time slots.\n";
         return;
     }
     cout << "Dentist ID\tStart\tEnd\tStatus\n";
@@ -195,6 +194,7 @@ void adminModifyDentist() {
     string id;
     cout << "Enter dentist ID to modify: ";
     cin >> id;
+    //validationModifyDenitst();
     Dentist* d = findDentistById(id);
     if (d == nullptr) {
         cout << "Syntax Error: Dentist not found.\n";
