@@ -1,12 +1,42 @@
 #include "../headers/Patient.h"
 #include "../headers/Validation.h"
 #include "../src/validation.cpp"
+#include "../headers/Verification.h"
+#include "../src/verification.cpp"
 #include <iostream>
+#include <ostream>
 #include <vector>
 #include <filesystem>
 #include <fstream>
+#include <sstream>
 
 using namespace std;
+
+void mainMenu() {
+    cout << "Welcome, user!" << endl;
+    cout << "1. Schedule an appointment" << endl;
+    cout << "2. View appointments" << endl;
+    cout << "3. View Profile" << endl;
+
+    int input;
+
+    switch(input) {
+        case 1:
+            //todo
+            break;
+
+        case 2:
+            //todo
+            break;
+
+        case 3:
+            //todo
+            break;
+
+        default:
+            cout << "Invalid input" << endl;
+    }
+}
 
 void registerPatient(vector<Patient>& patients) {
     char choice;
@@ -16,33 +46,39 @@ void registerPatient(vector<Patient>& patients) {
     do {
         
         cout << "Name: ";
-        getline(cin, p.name);
+        getline(cin, p.user.name);
 
-        while (!validatePatientAge(p.age)) {
+        while (!validatePatientAge(p.user.age)) {
             cout << "Age: ";
-            cin >> p.age;
+            cin >> p.user.age;
         }
 
         do {
             cout << "Gender (M/F): ";
-            cin >> p.gender;
-        } while (!validateGender(toupper(p.gender)));
+            cin >> p.user.gender;
+        } while (!validateGender(toupper(p.user.gender)));
 
         do {
             cout << "NRIC: ";
-            cin >> p.nric;
-        } while (!validateNRIC(p.nric));
+            cin >> p.user.nric;
+        } while (!validateNRIC(p.user.nric));
 
         do {
             cout << "Email: ";
-            cin >> p.email;
+            cin >> p.user.email;
             cin.ignore();
-        } while (!validateEmail(p.email));
+        } while (!validateEmail(p.user.email));
+
+        do {
+            cout << "Password: ";
+            cin >> p.user.password;
+            cin.ignore();
+        } while (!validatePassword(p.user.password));
 
         do {
             cout << "Phone Number: ";
-            getline(cin, p.phoneNo);
-        } while (!validatePhoneNo(p.phoneNo));
+            getline(cin, p.user.phoneNo);
+        } while (!validatePhoneNo(p.user.phoneNo));
 
 
         cout << "Allergies: ";
@@ -53,12 +89,12 @@ void registerPatient(vector<Patient>& patients) {
     } while (choice == 'y' || choice == 'Y');
 
     cout << "Your Profile (Patient ID: P" << patients.size() + 1 <<")";
-    cout << "Name: " << p.name << endl;
-    cout << "Age: " << p.age << endl;
-    cout << "Gender: " << p.gender << endl;
-    cout << "NRIC: " << p.nric << endl;
-    cout << "Email: " << p.email << endl;
-    cout << "Phone No.: " << p.phoneNo << endl;
+    cout << "Name: " << p.user.name << endl;
+    cout << "Age: " << p.user.age << endl;
+    cout << "Gender: " << p.user.gender << endl;
+    cout << "NRIC: " << p.user.nric << endl;
+    cout << "Email: " << p.user.email << endl;
+    cout << "Phone No.: " << p.user.phoneNo << endl;
     cout << "Allergies: " << p.allergies << endl;
     cout << "Confirm registration?" << endl;
 
@@ -71,14 +107,20 @@ void loginPatient(vector<Patient>& patients) {
     string email, password;
 
     cout << "Please login." << endl;
-    
+
     do {
+        cout << "Email: ";
+        cin >> email;
+    } while (!verifyEmail(patients, email));
 
-    } while (!verifyEmail());
-    cout << "Email: ";
-    cin >> email;
 
-    
+    do {
+        cout << "Password: ";
+        cin >> password;
+    } while (!verifyPassword(patients, password));
+
+
+
 }
 
 void modifyPatient(vector<Patient>& patients) {
@@ -92,27 +134,36 @@ vector<Patient> loadPatients() {
 
     if (!inFile.is_open()) return p;
 
-    string name, nric, email, phoneNo, allergies;
+    string name, nric, email, password, phoneNo, allergies;
     int age;
     char gender;
 
     string line;
 
-    while(getline(inFile, line)) { // check if next line exists in file
+    while(getline(inFile, line)) {
         stringstream ss(line);
 
+        string ageStr, genderStr;
+        getline(ss, name, ';');
+        getline(ss, ageStr, ';');    age = stoi(ageStr);
+        getline(ss, genderStr, ';'); gender = genderStr[0];
+        getline(ss, nric, ';');
+        getline(ss, email, ';');
+        getline(ss, password, ';');
+        getline(ss, phoneNo, ';');
+        getline(ss, allergies);
 
-        // create struct object for every line loaded
         Patient patient;
-        patient.name = name;
-        patient.age = age;
-        patient.gender = gender;
-        patient.nric = nric;
-        patient.email = email;
-        patient.phoneNo = phoneNo;
+        patient.user.name = name;
+        patient.user.age = age;
+        patient.user.gender = gender;
+        patient.user.nric = nric;
+        patient.user.email = email;
+        patient.user.password = password;
+        patient.user.phoneNo = phoneNo;
         patient.allergies = allergies;
 
-        p.push_back(patient); // push the patient object to the back of the vector (append)
+        p.push_back(patient);
     }
 
     inFile.close();
@@ -126,8 +177,7 @@ void savePatients(vector<Patient> patients) {
     ofstream outFile("data/patients.txt");
 
     for (Patient patient : patients) {
-        outFile << patient.name << ";" << patient.age << ";" << patient.gender << ";" << patient.nric << ";" << patient.email << ";" << patient.phoneNo << ";" << patient.allergies << endl;
-        // code here
+        outFile << patient.user.name << ";" << patient.user.age << ";" << patient.user.gender << ";" << patient.user.nric << ";" << patient.user.email << ";" << patient.user.password << ";" << patient.user.phoneNo << ";" << patient.allergies << endl;
     }
 
     outFile.close();

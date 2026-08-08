@@ -33,8 +33,12 @@ bool validateNRIC(string input) {
 bool validateEmail(string input) {
     const regex emailFormat(R"(^\w+@\w+.com)"); // upgrade to adapt to broader format
     return regex_match(input, emailFormat);
-};
+}
 
+bool validatePassword(string input) {
+    // implement confirm password
+    return true;
+}
 bool validatePhoneNo(string input) {
     const regex phoneNoFormat(R"(^01\d-\d{3,4} \d{4}$)");
 
