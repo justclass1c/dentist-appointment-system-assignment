@@ -3,6 +3,7 @@
 #include "../src/validation.cpp"
 #include "../headers/Verification.h"
 #include "../src/verification.cpp"
+#include "../src/users.cpp"
 #include <iostream>
 #include <ostream>
 #include <vector>
@@ -12,13 +13,14 @@
 
 using namespace std;
 
-void mainMenu() {
+void mainMenu(vector<Patient> patients) {
     cout << "Welcome, user!" << endl;
     cout << "1. Schedule an appointment" << endl;
     cout << "2. View appointments" << endl;
     cout << "3. View Profile" << endl;
 
     int input;
+    cin >> input;
 
     switch(input) {
         case 1:
@@ -30,7 +32,7 @@ void mainMenu() {
             break;
 
         case 3:
-            //todo
+            viewPatientProfile(patients, currentUserID);
             break;
 
         default:
@@ -119,8 +121,8 @@ void loginPatient(vector<Patient>& patients) {
         cin >> password;
     } while (!verifyPassword(patients, password));
 
-
-
+    assignCurrentUser(PATIENT, patients, email);
+    mainMenu(patients);
 }
 
 void modifyPatient(vector<Patient>& patients) {
@@ -134,7 +136,7 @@ vector<Patient> loadPatients() {
 
     if (!inFile.is_open()) return p;
 
-    string name, nric, email, password, phoneNo, allergies;
+    string id, name, nric, email, password, phoneNo, allergies;
     int age;
     char gender;
 
@@ -144,6 +146,7 @@ vector<Patient> loadPatients() {
         stringstream ss(line);
 
         string ageStr, genderStr;
+        getline(ss, id, ';');
         getline(ss, name, ';');
         getline(ss, ageStr, ';');    age = stoi(ageStr);
         getline(ss, genderStr, ';'); gender = genderStr[0];
@@ -154,6 +157,7 @@ vector<Patient> loadPatients() {
         getline(ss, allergies);
 
         Patient patient;
+        patient.user.id = id;
         patient.user.name = name;
         patient.user.age = age;
         patient.user.gender = gender;
@@ -183,3 +187,19 @@ void savePatients(vector<Patient> patients) {
     outFile.close();
 }
 
+void viewPatientProfile(vector<Patient> patients, string currentUserID) {
+    for (Patient patient : patients) {
+        if (currentUserID == patient.user.id) {
+            cout << "Your Profile:" << endl;
+            cout << "Patient ID: " << patient.user.id << endl;
+            cout << "Name: " << patient.user.name << endl;
+            cout << "Age: " << patient.user.age << endl;
+            cout << "Gender: " << (patient.user.gender == 'M' ? "Male" : "Female") << endl;
+            cout << "Email: " << patient.user.email << endl;
+            cout << "NRIC: " << patient.user.nric << endl;
+            cout << "Contact: " << patient.user.phoneNo << endl;
+
+            break;
+        }
+    }
+}

@@ -9,7 +9,7 @@
 #include <algorithm>
 #include <cctype>
 #include <iomanip>
-#include "USer.h"
+#include "User.h"
 
 using namespace std;
 

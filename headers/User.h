@@ -4,10 +4,17 @@
 #include <string>
 
 using namespace std;
+
 struct User {
     string id, name, email, password, nric, phoneNo;
     int age;
     char gender;
+};
+
+void assignCurrentUser(User u);
+
+enum Roles {
+    PATIENT, DENTIST, RECEPTIONIST, ADMIN
 };
 
 #endif

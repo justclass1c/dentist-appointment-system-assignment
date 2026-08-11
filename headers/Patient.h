@@ -3,7 +3,7 @@
 
 #include <string>
 #include <vector>
-#include "USer.h"
+#include "User.h"
 
 using namespace std;
 
@@ -19,6 +19,6 @@ void loginPatient(vector<Patient>& patients);
 void viewPatients(vector<Patient>& patients);
 void createPatient(Patient patient, vector<Patient>& patients);
 void savePatients(vector<Patient> patients);
-void mainMenu();
-void viewProfile();
+void mainMenu(vector<Patient> patients);
+void viewPatientProfile(vector<Patient> patients, string currentUserID);
 #endif
