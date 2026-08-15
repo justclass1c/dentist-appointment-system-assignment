@@ -10,9 +10,7 @@ bool validateName(string input);
 bool validatePatientAge(int input);
 bool validateGender(char input);
 bool validateNRIC(string input);
-
-template<typename T>
-bool validateEmail(const T& user);
+bool validateEmail(string input);
 bool validatePassword(string input);
 bool validatePhoneNo(string input);
 

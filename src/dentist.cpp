@@ -1,20 +1,15 @@
-#include "Dentist.h"
-
-// ========================== File Names ==========================
+#include "../headers/Dentist.h"
+#include "../headers/Appointment.h"
+#include "../headers/Console.h"
 
 const string DENTIST_FILE = "dentists.txt";
 const string SLOT_FILE = "slots.txt";
 
-// Hardcoded reception credentials
 const string RECEPTION_USERNAME = "reception";
 const string RECEPTION_PASSWORD = "pass123";
 
-// ========================== Global Data Definitions ==========================
-
 vector<Dentist> dentists;
 vector<TimeSlot> slots;
-
-// ========================== Helper Functions ==========================
 
 string trim(const string& str) {
     size_t first = str.find_first_not_of(" \t\n\r");
@@ -33,7 +28,22 @@ vector<string> split(const string& s, char delim) {
     return tokens;
 }
 
-// ========================== File I/O ==========================
+static string askNonBlank(const string& label) {
+    string note, answer;
+    while (true) {
+        answer = trim(askInPlace(label, note));
+        if (!cin) return answer;
+
+        if (answer.empty()) {
+            note = "[cannot be blank] ";
+        } else if (answer.find(',') != string::npos) {
+            note = "[no commas - they break the file] ";
+        } else {
+            acceptInPlace(label, answer);
+            return answer;
+        }
+    }
+}
 
 void loadDentists() {
     ifstream file(DENTIST_FILE);
@@ -91,8 +101,6 @@ void saveSlots() {
     file.close();
 }
 
-// ========================== Find Functions ==========================
-
 Dentist* findDentistById(const string& id) {
     for (auto& d : dentists) {
         if (d.id == id) return &d;
@@ -135,8 +143,6 @@ bool removeSlot(const string& dentistId, const string& start, const string& end)
     return false;
 }
 
-// ========================== Display Functions ==========================
-
 void displayDentistInfo(const Dentist& d) {
     cout << "ID: " << d.id << "\n";
     cout << "Name: " << d.user.name << "\n";
@@ -156,8 +162,6 @@ void displaySlots(const vector<TimeSlot>& slotList) {
     }
 }
 
-// ========================== Admin Panel ==========================
-
 void adminRegisterDentist() {
     Dentist d;
 
@@ -173,19 +177,13 @@ void adminRegisterDentist() {
         d.id = ss.str();
     }
     d.user.id = d.id;
-    // -----------------------
 
     cout << "Generated Dentist ID: " << d.id << endl;
 
-    cout << "Enter name: ";
-    cin.ignore();
-    getline(cin, d.user.name);
-    cout << "Enter age: ";
-    cin >> d.user.age;
-    cout << "Enter email: ";
-    cin >> d.user.email;
-    cout << "Enter password: ";
-    cin >> d.user.password;
+    d.user.name     = askNonBlank("Enter name: ");
+    d.user.age      = readMenuChoice("Enter age: ", 1, 120);
+    d.user.email    = askNonBlank("Enter email: ");
+    d.user.password = askNonBlank("Enter password: ");
 
     dentists.push_back(d);
     saveDentists();
@@ -196,7 +194,7 @@ void adminModifyDentist() {
     string id;
     cout << "Enter dentist ID to modify: ";
     cin >> id;
-    //validationModifyDenitst();
+
     Dentist* d = findDentistById(id);
     if (d == nullptr) {
         cout << "Syntax Error: Dentist not found.\n";
@@ -235,10 +233,10 @@ void adminPanel() {
         cout << "\n--- Admin Panel ---\n";
         cout << "1. Register dentist\n";
         cout << "2. Modify dentist information\n";
-        cout << "3. Back to reception menu\n";
-        cout << "Choose: ";
-        int choice;
-        cin >> choice;
+        cout << "3. Manage all appointments\n";
+        cout << "0. Log out\n";
+
+        int choice = readMenuChoice("Choose: ", 0, 3);
 
         switch (choice) {
             case 1:
@@ -247,20 +245,41 @@ void adminPanel() {
             case 2:
                 adminModifyDentist();
                 break;
-            case 3:
+            case 3: {
+
+                Session current;
+                current.userId   = "ADM001";
+                current.name     = "Administrator";
+                current.password = adminPassword;
+                current.role     = ADMIN;
+                appointmentMenu(current);
+                break;
+            }
+            case 0:
+                cout << "Logging out from admin.\n";
                 return;
-            default:
-                cout << "Invalid choice.\n";
         }
     }
 }
 
-// ========================== Reception Menu ==========================
-
 void receptionViewAllSchedules() {
+    if (dentists.empty()) {
+        cout << "\nNo dentists are registered yet.\n"
+             << "An admin can add one from the main menu: Login Admin > Register dentist.\n";
+        return;
+    }
+
     for (const Dentist& d : dentists) {
+        cout << "\n" << d.id << " - "
+             << (d.user.name.empty() ? "(no name on record)" : d.user.name) << "\n";
+
         vector<TimeSlot> ds = getSlotsForDentist(d.id);
-        displaySlots(ds);
+        if (ds.empty()) {
+            cout << "  No timeslots set. The dentist adds these from"
+                 << " Manage my time slots.\n";
+        } else {
+            displaySlots(ds);
+        }
     }
 }
 
@@ -268,43 +287,40 @@ void receptionMenu() {
     while (true) {
         cout << "\n--- Reception Menu ---\n";
         cout << "1. View all dentists' schedules\n";
-        cout << "2. Login admin\n";
-        cout << "3. Logout\n";
-        cout << "Choose: ";
-        int choice;
-        cin >> choice;
+        cout << "2. Manage appointments\n";
+        cout << "0. Logout\n";
+
+        int choice = readMenuChoice("Choose: ", 0, 2);
 
         switch (choice) {
             case 1:
                 receptionViewAllSchedules();
                 break;
-            case 2:
-                cout << "Please enter admin name: ";
-                cin >> adminNameInput;
-                if (adminNameInput == adminName) {
-                    cout << "Please enter admin password: ";
-                    cin >> adminPasswordInput;
-                    if (adminPasswordInput == adminPassword) {
-                        adminPanel();
-                        break;
-                    }
-                    else cout << "Wrong password";
-                }
-                else cout << "Wrong name\n";
-                
-            case 3:
+            case 2: {
+
+                Session current;
+                current.userId   = "R001";
+                current.name     = "Reception";
+                current.password = RECEPTION_PASSWORD;
+                current.role     = RECEPTIONIST;
+                appointmentMenu(current);
+                break;
+            }
+            case 0:
                 cout << "Logging out from reception.\n";
                 return;
-            default:
-                cout << "Invalid choice.\n";
         }
     }
 }
 
-// ========================== Dentist Menu ==========================
-
 void dentistViewSchedule(Dentist* d) {
     vector<TimeSlot> ds = getSlotsForDentist(d->id);
+
+    if (ds.empty()) {
+        cout << "\nNo timeslots set yet. Add one from Manage my time slots.\n";
+        return;
+    }
+    cout << "\n";
     displaySlots(ds);
 }
 
@@ -391,10 +407,12 @@ void dentistMenu(Dentist* d) {
         cout << "\n--- Dentist Menu (" << d->user.name << ") ---\n";
         cout << "1. View my schedule\n";
         cout << "2. Manage my time slots\n";
-        cout << "3. Logout\n";
+        cout << "3. My appointments\n";
+        cout << "4. Logout\n";
         cout << "Choose: ";
         int choice;
         cin >> choice;
+        cin.ignore(1000, '\n');
 
         if (choice == 1) {
             dentistViewSchedule(d);
@@ -422,6 +440,14 @@ void dentistMenu(Dentist* d) {
             }
             back: ;
         } else if (choice == 3) {
+
+            Session current;
+            current.userId   = d->id;
+            current.name     = d->user.name;
+            current.password = d->user.password;
+            current.role     = DENTIST;
+            appointmentMenu(current);
+        } else if (choice == 4) {
             cout << "Logging out.\n";
             return;
         } else {
@@ -430,44 +456,91 @@ void dentistMenu(Dentist* d) {
     }
 }
 
-// ========================== Login Functions ==========================
-
 void loginDentist() {
-    string name, pass;
-    cout << "Enter dentist name: ";
-    cin.ignore();
-    getline(cin, name);
-    cout << "Enter password: ";
-    getline(cin, pass);
+    string name, pass, note;
 
-    Dentist* d = findDentistByName(name);
-    if (d == nullptr) {
-        cout << "Dentist not found.\n";
+    if (dentists.empty()) {
+        cout << "No dentists are registered yet.\n"
+             << "An admin can add one from the main menu: Login Admin > Register dentist.\n";
         return;
     }
-    if (d->user.password != pass) {
-        cout << "Incorrect password.\n";
-        return;
+
+    cout << "Dentist login. (0 to go back)\n";
+
+    Dentist* d = nullptr;
+    while (true) {
+        name = trim(askInPlace("Dentist name: ", note));
+        if (!cin || name == "0") { clearLine(); cout << "Login cancelled.\n"; return; }
+
+        if (name.empty()) { note = "[cannot be blank] "; continue; }
+
+        d = findDentistByName(name);
+        if (d != nullptr) break;
+        note = "[no dentist with that name] ";
     }
+    acceptInPlace("Dentist name: ", name);
+
+    note.clear();
+    while (true) {
+        pass = trim(askInPlace("Password: ", note));
+        if (!cin || pass == "0") { clearLine(); cout << "Login cancelled.\n"; return; }
+        if (pass == d->user.password) break;
+        note = "[incorrect password] ";
+    }
+    acceptInPlace("Password: ", string(pass.length(), '*'));
+
     cout << "Login successful. Welcome, " << d->user.name << "!\n";
     dentistMenu(d);
 }
 
 void loginReception() {
-    string username, pass;
-    cout << "Enter reception username: ";
-    cin >> username;
-    cout << "Enter password: ";
-    cin >> pass;
+    string username, pass, note;
 
-    if (username == RECEPTION_USERNAME && pass == RECEPTION_PASSWORD) {
-        cout << "Reception login successful.\n";
-        receptionMenu();
-    } else {
-        cout << "Invalid credentials.\n";
+    cout << "Reception login. (0 to go back)\n";
+
+    while (true) {
+        username = trim(askInPlace("Username: ", note));
+        if (!cin || username == "0") { clearLine(); cout << "Login cancelled.\n"; return; }
+        if (username == RECEPTION_USERNAME) break;
+        note = "[no such user] ";
     }
+    acceptInPlace("Username: ", username);
+
+    note.clear();
+    while (true) {
+        pass = trim(askInPlace("Password: ", note));
+        if (!cin || pass == "0") { clearLine(); cout << "Login cancelled.\n"; return; }
+        if (pass == RECEPTION_PASSWORD) break;
+        note = "[incorrect password] ";
+    }
+    acceptInPlace("Password: ", string(pass.length(), '*'));
+
+    cout << "Reception login successful.\n";
+    receptionMenu();
 }
 
-void registerPatientPlaceholder() {
-    cout << "Patient registration not implemented (placeholder).\n";
+void loginAdmin() {
+    string name, pass, note;
+
+    cout << "Admin login. (0 to go back)\n";
+
+    while (true) {
+        name = trim(askInPlace("Admin name: ", note));
+        if (!cin || name == "0") { clearLine(); cout << "Login cancelled.\n"; return; }
+        if (name == adminName) break;
+        note = "[no such admin] ";
+    }
+    acceptInPlace("Admin name: ", name);
+
+    note.clear();
+    while (true) {
+        pass = trim(askInPlace("Admin password: ", note));
+        if (!cin || pass == "0") { clearLine(); cout << "Login cancelled.\n"; return; }
+        if (pass == adminPassword) break;
+        note = "[incorrect password] ";
+    }
+    acceptInPlace("Admin password: ", string(pass.length(), '*'));
+
+    cout << "Admin login successful.\n";
+    adminPanel();
 }

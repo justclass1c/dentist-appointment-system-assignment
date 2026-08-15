@@ -4,7 +4,7 @@
 using namespace std;
 
 bool validateName(string input) {
-    // wip
+
     return true;
 }
 
@@ -26,18 +26,17 @@ bool validateGender(char input) {
 }
 
 bool validateNRIC(string input) {
-    const regex nricFormat(R"(^\d{6}-\d{2}-\d{4}$)"); // check for xxxxxx-xx-xxxx
+    const regex nricFormat(R"(^\d{6}-\d{2}-\d{4}$)");
     return regex_match(input, nricFormat);
 }
 
-template<typename T>
-bool validateEmail(const T& user) {
-    const regex emailFormat(R"(^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$)");
-    return regex_match(user.email, emailFormat);
+bool validateEmail(string input) {
+    const regex emailFormat(R"(^\w+@\w+.com)");
+    return regex_match(input, emailFormat);
 }
 
 bool validatePassword(string input) {
-    // implement confirm password
+
     return true;
 }
 bool validatePhoneNo(string input) {
@@ -45,4 +44,3 @@ bool validatePhoneNo(string input) {
 
     return regex_match(input, phoneNoFormat);
 }
-
