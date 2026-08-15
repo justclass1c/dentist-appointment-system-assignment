@@ -3,17 +3,12 @@
 
 #include <string>
 #include <vector>
+#include "User.h"
 
 using namespace std;
 
 struct Patient {
-    string id;
-    string name;
-    int age;
-    char gender;
-    string nric;
-    string email;
-    string phoneNo;
+    User user;
     string allergies;
 };
 
@@ -24,4 +19,6 @@ void loginPatient(vector<Patient>& patients);
 void viewPatients(vector<Patient>& patients);
 void createPatient(Patient patient, vector<Patient>& patients);
 void savePatients(vector<Patient> patients);
+void mainMenu(vector<Patient> patients);
+void viewPatientProfile(vector<Patient> patients, string currentUserID);
 #endif
