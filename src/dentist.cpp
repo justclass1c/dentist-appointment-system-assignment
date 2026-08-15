@@ -1,4 +1,4 @@
-#include "Dentist.h"
+#include "../headers/Dentist.h"
 
 // ========================== File Names ==========================
 
@@ -57,7 +57,7 @@ void loadDentists() {
 
 void saveDentists() {
     ofstream file(DENTIST_FILE);
-    for (const auto& d : dentists) {
+    for (const Dentist& d : dentists) {
         file << d.user.id << "," << d.user.name << "," << d.user.age << ","
              << d.user.email << "," << d.user.password << "\n";
     }

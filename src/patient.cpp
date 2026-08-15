@@ -1,7 +1,6 @@
 #include "../headers/Patient.h"
 #include "../headers/Validation.h"
 #include "../src/validation.cpp"
-#include "../headers/Verification.h"
 #include "../src/verification.cpp"
 #include "../src/users.cpp"
 #include <iostream>
@@ -63,13 +62,13 @@ void registerPatient(vector<Patient>& patients) {
         do {
             cout << "NRIC: ";
             cin >> p.user.nric;
-        } while (!validateNRIC(p.user.nric));
+        } while (!validateNRIC(p.user.nric, patients));
 
         do {
             cout << "Email: ";
             cin >> p.user.email;
             cin.ignore();
-        } while (!validateEmail(p.user.email));
+        } while (!validateEmail(p, patients));
 
         do {
             cout << "Password: ";
@@ -136,7 +135,7 @@ vector<Patient> loadPatients() {
 
     if (!inFile.is_open()) return p;
 
-    string id, name, nric, email, password, phoneNo, allergies;
+    string name, nric, email, password, phoneNo, allergies;
     int age;
     char gender;
 
@@ -146,7 +145,6 @@ vector<Patient> loadPatients() {
         stringstream ss(line);
 
         string ageStr, genderStr;
-        getline(ss, id, ';');
         getline(ss, name, ';');
         getline(ss, ageStr, ';');    age = stoi(ageStr);
         getline(ss, genderStr, ';'); gender = genderStr[0];
@@ -157,7 +155,6 @@ vector<Patient> loadPatients() {
         getline(ss, allergies);
 
         Patient patient;
-        patient.user.id = id;
         patient.user.name = name;
         patient.user.age = age;
         patient.user.gender = gender;
