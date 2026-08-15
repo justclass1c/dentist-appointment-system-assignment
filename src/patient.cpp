@@ -69,9 +69,6 @@ void registerPatient(vector<Patient>& patients) {
             cout << "Email: ";
             cin >> p.user.email;
             cin.ignore();
-<<<<<<< HEAD
-        } while (!validateEmail(p));
-=======
         } while (!validateEmail(p.user.email));
 
         do {
@@ -79,7 +76,6 @@ void registerPatient(vector<Patient>& patients) {
             cin >> p.user.password;
             cin.ignore();
         } while (!validatePassword(p.user.password));
->>>>>>> a9154dd4f288ba911628396e9ad48080eba4c2be
 
         do {
             cout << "Phone Number: ";

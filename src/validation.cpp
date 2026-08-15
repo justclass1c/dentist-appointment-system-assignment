@@ -30,16 +30,10 @@ bool validateNRIC(string input) {
     return regex_match(input, nricFormat);
 }
 
-<<<<<<< HEAD
 template<typename T>
 bool validateEmail(const T& user) {
     const regex emailFormat(R"(^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$)");
     return regex_match(user.email, emailFormat);
-=======
-bool validateEmail(string input) {
-    const regex emailFormat(R"(^\w+@\w+.com)"); // upgrade to adapt to broader format
-    return regex_match(input, emailFormat);
->>>>>>> a9154dd4f288ba911628396e9ad48080eba4c2be
 }
 
 bool validatePassword(string input) {
