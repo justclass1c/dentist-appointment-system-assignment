@@ -86,6 +86,14 @@ void registerPatient(vector<Patient>& patients) {
         cout << "Allergies: ";
         getline(cin, p.allergies);
 
+        // added: capture insurance status at registration so Payment module
+        // can automatically apply the insurance discount later without re-asking
+        char insuranceAns;
+        cout << "Do you have dental insurance coverage? (Y/N): ";
+        cin >> insuranceAns;
+        cin.ignore();
+        p.hasInsurance = (toupper(insuranceAns) == 'Y');
+
         patients.push_back(p);
 
     } while (choice == 'y' || choice == 'Y');
@@ -98,6 +106,7 @@ void registerPatient(vector<Patient>& patients) {
     cout << "Email: " << p.user.email << endl;
     cout << "Phone No.: " << p.user.phoneNo << endl;
     cout << "Allergies: " << p.allergies << endl;
+    cout << "Insurance: " << (p.hasInsurance ? "Yes" : "No") << endl;
     cout << "Confirm registration?" << endl;
 
     cout << "(Y = Yes / N = No / M = Nodify): ";
@@ -145,7 +154,7 @@ vector<Patient> loadPatients() {
     while(getline(inFile, line)) {
         stringstream ss(line);
 
-        string ageStr, genderStr;
+        string ageStr, genderStr, insuranceStr;
         getline(ss, id, ';');
         getline(ss, name, ';');
         getline(ss, ageStr, ';');    age = stoi(ageStr);
@@ -154,7 +163,8 @@ vector<Patient> loadPatients() {
         getline(ss, email, ';');
         getline(ss, password, ';');
         getline(ss, phoneNo, ';');
-        getline(ss, allergies);
+        getline(ss, allergies, ';');
+        getline(ss, insuranceStr); // added: last field, no trailing delimiter
 
         Patient patient;
         patient.user.id = id;
@@ -166,6 +176,7 @@ vector<Patient> loadPatients() {
         patient.user.password = password;
         patient.user.phoneNo = phoneNo;
         patient.allergies = allergies;
+        patient.hasInsurance = (!insuranceStr.empty() && insuranceStr[0] == '1'); // added
 
         p.push_back(patient);
     }
@@ -181,7 +192,7 @@ void savePatients(vector<Patient> patients) {
     ofstream outFile("data/patients.txt");
 
     for (Patient patient : patients) {
-        outFile << patient.user.name << ";" << patient.user.age << ";" << patient.user.gender << ";" << patient.user.nric << ";" << patient.user.email << ";" << patient.user.password << ";" << patient.user.phoneNo << ";" << patient.allergies << endl;
+        outFile << patient.user.name << ";" << patient.user.age << ";" << patient.user.gender << ";" << patient.user.nric << ";" << patient.user.email << ";" << patient.user.password << ";" << patient.user.phoneNo << ";" << patient.allergies << ";" << (patient.hasInsurance ? "1" : "0") << endl;
     }
 
     outFile.close();
@@ -198,8 +209,20 @@ void viewPatientProfile(vector<Patient> patients, string currentUserID) {
             cout << "Email: " << patient.user.email << endl;
             cout << "NRIC: " << patient.user.nric << endl;
             cout << "Contact: " << patient.user.phoneNo << endl;
+            cout << "Insurance: " << (patient.hasInsurance ? "Yes" : "No") << endl;
 
             break;
         }
     }
+}
+
+// added: lookup helper so the Payment module can pull a patient's age/insurance
+// status directly by ID instead of asking the receptionist to re-enter it
+Patient* findPatientByID(vector<Patient>& patients, const string& id) {
+    for (Patient& patient : patients) {
+        if (patient.user.id == id) {
+            return &patient;
+        }
+    }
+    return nullptr;
 }
