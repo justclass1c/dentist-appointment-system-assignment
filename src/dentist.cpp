@@ -117,7 +117,7 @@ void adminRegisterDentist() {
 
     string nameNote;
     while (true) {
-        d.user.name = askNonBlank("Enter name (letters, spaces, - and '): ");
+        d.user.name = askNonBlank("Enter name: ");
         if (!cin) break;
         if (!validateName(d.user.name)) {
             cout << "  [!] A name may only contain letters, spaces, hyphens and apostrophes.\n";
@@ -144,6 +144,16 @@ void adminModifyDentist() {
 
     string id, note;
     Dentist* d = NULL;
+
+    cout << "\n  Registered dentists\n";
+    cout << "  " << string(38, '-') << "\n";
+    for (size_t i = 0; i < dentists.size(); i++) {
+        cout << "  " << left << setw(8) << dentists[i].id
+             << (dentists[i].user.name.empty() ? "(no name on record)" : dentists[i].user.name)
+             << "\n";
+    }
+    cout << "  " << string(38, '-') << "\n";
+
     cout << "\nModify a dentist. (0 to cancel)\n";
 
     while (true) {

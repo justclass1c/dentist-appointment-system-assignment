@@ -179,7 +179,7 @@ void registerPatient(vector<Patient>& patients) {
 
         string note, name;
         while (true) {
-            name = trimInput(askInPlace("Name (letters, spaces, - and '): ", note));
+            name = trimInput(askInPlace("Name: ", note));
             if (!cin || name == "0") {
                 clearLine();
                 cout << "Registration cancelled. Nothing was saved." << endl;
@@ -187,7 +187,7 @@ void registerPatient(vector<Patient>& patients) {
             }
             if (name.empty())          { note = "[cannot be blank] "; continue; }
             if (!validateName(name))   { note = "[letters, spaces, - and ' only] "; continue; }
-            acceptInPlace("Name (letters, spaces, - and '): ", name);
+            acceptInPlace("Name: ", name);
             break;
         }
         p.user.name = name;

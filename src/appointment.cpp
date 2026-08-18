@@ -699,9 +699,32 @@ static int selectAppointment(const Session& current, int statusFilter, bool unas
     printModuleHeader(title);
     displayAppointmentTable(rows);
 
-    int choice = readInt("\n  Select a record number (0 to cancel): ", 0, (int)rows.size());
-    if (choice == 0) return -1;
-    return rows[choice - 1];
+    string note;
+    while (true) {
+        string typed = trimField(askInPlace("\n  Select by No. or Appointment ID (0 to cancel): ", note));
+        if (!cin) { cout << endl; return -1; }
+        if (typed == "0") { clearLine(); cout << "  Cancelled.\n"; return -1; }
+
+        for (size_t i = 0; i < typed.length(); i++) typed[i] = toupper(typed[i]);
+
+        for (size_t i = 0; i < rows.size(); i++) {
+            if (appointments[rows[i]].appointmentID == typed) {
+                clearLine();
+                cout << "  Selected " << typed << "\n";
+                return rows[i];
+            }
+        }
+
+        int number = 0;
+        stringstream parse(typed);
+        if ((parse >> number) && number >= 1 && number <= (int)rows.size()) {
+            clearLine();
+            cout << "  Selected " << appointments[rows[number - 1]].appointmentID << "\n";
+            return rows[number - 1];
+        }
+
+        note = "[no such row or appointment ID] ";
+    }
 }
 
 static int chooseSlot(int grid[][SLOTS_PER_DAY], Date date) {
