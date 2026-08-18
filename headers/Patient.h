@@ -13,11 +13,9 @@ struct Patient {
     string allergies;
 };
 
-Patient inputPatientDetails(string id);
+vector<Patient> loadPatients();
 void registerPatient(vector<Patient>& patients);
 void loginPatient(vector<Patient>& patients);
-void viewPatients(vector<Patient>& patients);
-void createPatient(Patient patient, vector<Patient>& patients);
 void savePatients(vector<Patient> patients);
 void viewPatientProfile(vector<Patient> patients, string currentUserID);
 

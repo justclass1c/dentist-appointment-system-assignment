@@ -13,6 +13,7 @@
 #include <fstream>
 #include <sstream>
 #include <iomanip>
+#include <cstdlib>
 
 using namespace std;
 
@@ -23,6 +24,19 @@ static string trimInput(const string& text) {
     return text.substr(first, last - first + 1);
 }
 
+static string nextPatientId(const vector<Patient>& patients) {
+    int highest = 0;
+    for (size_t i = 0; i < patients.size(); i++) {
+        const string& id = patients[i].user.id;
+        if (id.length() < 2 || toupper(id[0]) != 'P') continue;
+        int number = atoi(id.substr(1).c_str());
+        if (number > highest) highest = number;
+    }
+    stringstream ss;
+    ss << "P" << setw(3) << setfill('0') << (highest + 1);
+    return ss.str();
+}
+
 static void printPatientMenu(const Session& current) {
     cout << "\nWelcome, " << current.name << "!" << endl;
     cout << "1. Schedule an appointment" << endl;
@@ -30,7 +44,7 @@ static void printPatientMenu(const Session& current) {
     cout << "3. Modify an appointment" << endl;
     cout << "4. Cancel an appointment" << endl;
     cout << "5. Find the next available slot" << endl;
-    cout << "6. View Profile" << endl;
+    cout << "6. View profile" << endl;
     cout << "0. Logout" << endl;
 }
 
@@ -74,7 +88,10 @@ void mainMenu(vector<Patient> patients, const Session& current) {
             case 3: modifyAppointment(current);   break;
             case 4: cancelAppointment(current);   break;
             case 5: findNextAvailable();          break;
-            case 6: viewPatientProfile(patients, currentUserID); break;
+            case 6:
+                viewPatientProfile(patients, currentUserID);
+                pauseForKey();
+                break;
         }
         showMenu = true;
     }
@@ -111,7 +128,22 @@ static int askAge(const string& label) {
             acceptInPlace(label, shown.str());
             return value;
         }
-        note = "[1-120] ";
+        note = "[18-120] ";
+    }
+}
+
+static char askGender(const string& label) {
+    string note;
+    while (true) {
+        string line = trimInput(askInPlace(label, note));
+        if (!cin) return 'M';
+
+        if (line.length() == 1 && validateGender(line[0])) {
+            char typed = toupper(line[0]);
+            acceptInPlace(label, string(1, typed));
+            return typed;
+        }
+        note = "[M or F] ";
     }
 }
 
@@ -143,31 +175,64 @@ void registerPatient(vector<Patient>& patients) {
 
     while (true) {
 
-        stringstream idStream;
-        idStream << "P" << setw(3) << setfill('0') << (patients.size() + 1);
-        p.user.id = idStream.str();
+        p.user.id = nextPatientId(patients);
 
         string note, name;
         while (true) {
-            name = trimInput(askInPlace("Name: ", note));
+            name = trimInput(askInPlace("Name (letters, spaces, - and '): ", note));
             if (!cin || name == "0") {
                 clearLine();
                 cout << "Registration cancelled. Nothing was saved." << endl;
                 return;
             }
             if (name.empty())          { note = "[cannot be blank] "; continue; }
-            if (!validateName(name))   { note = "[not accepted] ";    continue; }
-            acceptInPlace("Name: ", name);
+            if (!validateName(name))   { note = "[letters, spaces, - and ' only] "; continue; }
+            acceptInPlace("Name (letters, spaces, - and '): ", name);
             break;
         }
         p.user.name = name;
 
-        p.user.age     = askAge("Age: ");
-        p.user.gender  = askLetter("Gender (M/F): ", "MF", "[M or F] ");
-        p.user.nric    = askField("NRIC: ", "[use xxxxxx-xx-xxxx] ", validateNRIC);
-        p.user.email   = askField("Email: ", "[use name@example.com] ", validateEmail);
-        p.user.password= askField("Password: ", "[not accepted] ", validatePassword);
-        p.user.phoneNo = askField("Phone Number: ", "[use 01x-xxx xxxx] ", validatePhoneNo);
+        p.user.age     = askAge("Age (18-120): ");
+        p.user.gender  = askGender("Gender (M/F): ");
+        /* NRIC and email use main's template validators, which check the
+         * format AND that no existing patient already holds the value, so
+         * they need the whole roster and cannot go through askField(). */
+        string nricNote;
+        while (true) {
+            string typed = trimInput(askInPlace("NRIC (e.g. 010101-01-0101): ", nricNote));
+            if (!cin) { p.user.nric = typed; break; }
+
+            if (typed.empty()) { nricNote = "[cannot be blank] "; continue; }
+            if (!validateNRIC(typed, patients)) {
+                nricNote = "[use xxxxxx-xx-xxxx, and not already registered] ";
+                continue;
+            }
+            acceptInPlace("NRIC (e.g. 010101-01-0101): ", typed);
+            p.user.nric = typed;
+            break;
+        }
+
+        /* validateEmail() reads targetUser.user.email, so the typed value is
+         * written into the record first and rolled back if it is rejected. */
+        string emailNote;
+        while (true) {
+            string typed = trimInput(askInPlace("Email (e.g. name@example.com): ", emailNote));
+            if (!cin) { p.user.email = typed; break; }
+
+            if (typed.empty()) { emailNote = "[cannot be blank] "; continue; }
+
+            p.user.email = typed;
+            if (!validateEmail(p, patients)) {
+                p.user.email.clear();
+                emailNote = "[use name@example.com, and not already registered] ";
+                continue;
+            }
+            acceptInPlace("Email (e.g. name@example.com): ", typed);
+            break;
+        }
+
+        p.user.password = askField("Password: ", "[cannot be blank] ", validatePassword);
+        p.user.phoneNo = askField("Phone Number (e.g. 012-345 6789): ", "[use 01x-xxx xxxx] ", validatePhoneNo);
 
         p.allergies = trimInput(askInPlace("Allergies (or 'none'): ", ""));
         if (p.allergies.empty()) p.allergies = "none";
@@ -189,7 +254,7 @@ void registerPatient(vector<Patient>& patients) {
             patients.push_back(p);
             savePatients(patients);
             cout << "\nRegistered. Your patient ID is " << p.user.id
-                 << " - log in with your email and password." << endl;
+                << " - log in with your email and password." << endl;
             return;
         }
         if (answer == 'N') {
@@ -218,6 +283,7 @@ void loginPatient(vector<Patient>& patients) {
             return;
         }
 
+        if (trimInput(email).empty()) { note = "[cannot be blank] "; continue; }
         if (verifyEmail(patients, email)) break;
         note = "[no account with that email] ";
     }
@@ -231,13 +297,20 @@ void loginPatient(vector<Patient>& patients) {
         getline(cin, password);
         stayOnPromptLine();
 
-        if (verifyPassword(patients, password)) break;
+        if (trimInput(password) == "0" || !cin) {
+            clearLine();
+            cout << "Login cancelled." << endl;
+            return;
+        }
+
+        if (password.empty()) { note = "[cannot be blank] "; continue; }
+        if (verifyPassword(patients, email, password)) break;
         note = "[incorrect password] ";
     }
     clearLine();
     cout << "Password: " << string(password.length(), '*') << endl;
 
-    assignCurrentUser(PATIENT, patients, email);
+    assignCurrentUser(patients, email);
 
     Session current;
     current.role = PATIENT;
@@ -272,13 +345,16 @@ vector<Patient> loadPatients() {
         string ageStr, genderStr;
         getline(ss, id, ';');
         getline(ss, name, ';');
-        getline(ss, ageStr, ';');    age = stoi(ageStr);
-        getline(ss, genderStr, ';'); gender = genderStr[0];
+        getline(ss, ageStr, ';');    age = toIntOr(ageStr, 0);
+        getline(ss, genderStr, ';'); gender = genderStr.empty() ? '?' : genderStr[0];
         getline(ss, nric, ';');
         getline(ss, email, ';');
         getline(ss, password, ';');
         getline(ss, phoneNo, ';');
         getline(ss, allergies);
+
+        if (trimInput(id).empty()) continue;
+        if (trimInput(email).empty()) continue;
 
         Patient patient;
         patient.user.id = id;
@@ -318,7 +394,8 @@ void viewPatientProfile(vector<Patient> patients, string currentUserID) {
             cout << "Patient ID: " << patient.user.id << endl;
             cout << "Name: " << patient.user.name << endl;
             cout << "Age: " << patient.user.age << endl;
-            cout << "Gender: " << (patient.user.gender == 'M' ? "Male" : "Female") << endl;
+            char g = toupper(patient.user.gender);
+            cout << "Gender: " << (g == 'M' ? "Male" : g == 'F' ? "Female" : "Not recorded") << endl;
             cout << "Email: " << patient.user.email << endl;
             cout << "NRIC: " << patient.user.nric << endl;
             cout << "Contact: " << patient.user.phoneNo << endl;

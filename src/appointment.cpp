@@ -56,10 +56,9 @@ static string formatSlot(int slotIndex);
 static void   buildScheduleGrid(int grid[][SLOTS_PER_DAY], const string& excludeID);
 static bool   isSlotFull(int grid[][SLOTS_PER_DAY], Date date, int slotIndex);
 static bool   isDentistBusy(string dentistID, Date date, int slotIndex);
-static int    parseHour(const string& text);
-static bool   isDentistAvailable(const string& dentistID, int slotIndex);
-static int    slotCapacity(int slotIndex);
+static int    slotCapacity();
 static bool   patientHasSlot(string patientID, Date date, int slotIndex, const string& excludeID);
+static int    ageAppointments();
 
 static string statusToString(Status s);
 static Status stringToStatus(const string& text);
@@ -91,7 +90,6 @@ static void assignDentist(const Session& current);
 static void displayScheduleGrid();
 void findNextAvailable();
 
-static void appointmentMenuPatient(const Session& current);
 static void appointmentMenuReception(const Session& current);
 static void appointmentMenuDentist(const Session& current);
 
@@ -223,7 +221,7 @@ static string to12Hour(int hour24) {
     int hour12 = hour24 % 12;
     if (hour12 == 0) hour12 = 12;
     stringstream ss;
-    ss << hour12 << ":00 " << (hour24 < 12 ? "AM" : "PM");
+    ss << setw(2) << setfill('0') << hour12 << ":00 " << (hour24 < 12 ? "AM" : "PM");
     return ss.str();
 }
 
@@ -237,7 +235,8 @@ static string toShortSlot(int slotIndex) {
     if (end12 == 0) end12 = 12;
 
     stringstream ss;
-    ss << start12 << "-" << end12 << (endHour < 12 ? "am" : "pm");
+    ss << setw(2) << setfill('0') << start12 << "-"
+    << setw(2) << setfill('0') << end12 << (endHour < 12 ? "am" : "pm");
     return ss.str();
 }
 
@@ -273,7 +272,7 @@ static bool isSlotFull(int grid[][SLOTS_PER_DAY], Date date, int slotIndex) {
     int offset = daysBetween(getToday(), date);
     if (offset < 0 || offset >= BOOKING_WINDOW) return true;
     if (slotIndex < 0 || slotIndex >= SLOTS_PER_DAY) return true;
-    return grid[offset][slotIndex] >= slotCapacity(slotIndex);
+    return grid[offset][slotIndex] >= slotCapacity();
 }
 
 static bool isDentistBusy(string dentistID, Date date, int slotIndex) {
@@ -289,51 +288,13 @@ static bool isDentistBusy(string dentistID, Date date, int slotIndex) {
     return false;
 }
 
-static int parseHour(const string& text) {
-    int hour = 0, minute = 0;
-    char colon = ' ';
-    stringstream ss(text);
-    if (!(ss >> hour >> colon >> minute) || colon != ':') return -1;
-    if (hour < 0 || hour > 24) return -1;
-    return hour;
-}
-
-static bool isDentistAvailable(const string& dentistID, int slotIndex) {
-    int slotStart = CLINIC_OPEN_HOUR + slotIndex * SLOT_DURATION_HRS;
-    int slotEnd   = slotStart + SLOT_DURATION_HRS;
-
-    bool declaredWorking = false;
-    bool covered         = false;
-
-    for (size_t i = 0; i < slots.size(); i++) {
-        const TimeSlot& t = slots[i];
-        if (t.dentistId != dentistID) continue;
-
-        int start = parseHour(t.start);
-        int end   = parseHour(t.end);
-        if (start < 0 || end < 0 || end <= start) continue;
-
-        bool overlaps = (start < slotEnd && end > slotStart);
-
-        if (t.available) {
-            declaredWorking = true;
-            if (overlaps && start <= slotStart && end >= slotEnd) covered = true;
-        } else if (overlaps) {
-            return false;
-        }
-    }
-
-    if (!declaredWorking) return true;
-    return covered;
-}
-
-static int slotCapacity(int slotIndex) {
-    int able = 0;
+static int slotCapacity() {
+    int onStaff = 0;
     for (size_t i = 0; i < dentists.size(); i++) {
         if (dentists[i].user.name.empty()) continue;
-        if (isDentistAvailable(dentists[i].id, slotIndex)) able++;
+        onStaff++;
     }
-    return (able > MAX_CHAIRS) ? MAX_CHAIRS : able;
+    return (onStaff > MAX_CHAIRS) ? MAX_CHAIRS : onStaff;
 }
 
 static bool patientHasSlot(string patientID, Date date, int slotIndex, const string& excludeID) {
@@ -377,6 +338,20 @@ static string generateAppointmentID() {
     return ss.str();
 }
 
+static int ageAppointments() {
+    Date today = getToday();
+    int aged = 0;
+
+    for (size_t i = 0; i < appointments.size(); i++) {
+        if (appointments[i].status != SCHEDULED) continue;
+        if (daysBetween(today, appointments[i].date) < 0) {
+            appointments[i].status = COMPLETED;
+            aged++;
+        }
+    }
+    return aged;
+}
+
 void loadAppointments() {
     appointments.clear();
 
@@ -408,6 +383,8 @@ void loadAppointments() {
         appointments.push_back(a);
     }
     inFile.close();
+
+    if (ageAppointments() > 0) saveAppointments();
 }
 
 void saveAppointments() {
@@ -596,7 +573,7 @@ static bool confirmPassword(const Session& current) {
     for (int attempt = 1; attempt <= MAX_PASSWORD_TRIES; attempt++) {
         stringstream label;
         label << "  Enter your password to confirm (" << attempt
-              << " of " << MAX_PASSWORD_TRIES << "): ";
+            << " of " << MAX_PASSWORD_TRIES << "): ";
 
         clearLine();
         cout << note << label.str() << flush;
@@ -637,11 +614,11 @@ static void displayAvailableSlots(int grid[][SLOTS_PER_DAY], Date date) {
     for (int i = 0; i < SLOTS_PER_DAY; i++) {
         int booked = 0;
         if (offset >= 0 && offset < BOOKING_WINDOW) booked = grid[offset][i];
-        int capacity = slotCapacity(i);
+        int capacity = slotCapacity();
         int free = capacity - booked;
 
         stringstream status;
-        if (capacity <= 0)  status << "No dentist on duty";
+        if (capacity <= 0)  status << "No dentist available";
         else if (free <= 0) status << "Occupied (full)";
         else                status << "Available (" << free << " of " << capacity << ")";
 
@@ -734,7 +711,7 @@ static int chooseSlot(int grid[][SLOTS_PER_DAY], Date date) {
 
         int slotIndex = choice - 1;
         if (isSlotFull(grid, date, slotIndex)) {
-            if (slotCapacity(slotIndex) <= 0) {
+            if (slotCapacity() <= 0) {
                 cout << "  [!] No dentist is on duty for " << formatSlot(slotIndex) << ". Please pick another hour.\n";
             } else {
                 cout << "  [!] " << formatSlot(slotIndex) << " is fully booked. Please pick another hour.\n";
@@ -762,11 +739,10 @@ static string chooseDentist(Date date, int slotIndex) {
         cout << "  " << string(52, '-') << "\n";
         for (size_t i = 0; i < ids.size(); i++) {
             string note;
-            if (!isDentistAvailable(ids[i], slotIndex))       note = "   [off duty this hour]";
-            else if (isDentistBusy(ids[i], date, slotIndex))  note = "   [busy this hour]";
+            if (isDentistBusy(ids[i], date, slotIndex)) note = "   [busy this hour]";
 
             cout << "  " << (i + 1) << ". " << ids[i] << " "
-                 << lookupDentistName(ids[i]) << note << "\n";
+                << lookupDentistName(ids[i]) << note << "\n";
         }
         cout << "  " << string(52, '-') << "\n";
 
@@ -775,14 +751,9 @@ static string chooseDentist(Date date, int slotIndex) {
 
         string chosen = ids[choice - 1];
 
-        if (!isDentistAvailable(chosen, slotIndex)) {
-            cout << "  [!] " << lookupDentistName(chosen) << " is not on duty at "
-                 << formatSlot(slotIndex) << ".\n";
-            continue;
-        }
         if (isDentistBusy(chosen, date, slotIndex)) {
             cout << "  [!] " << lookupDentistName(chosen) << " already has an appointment at "
-                 << formatSlot(slotIndex) << " on " << formatDate(date) << ".\n";
+                << formatSlot(slotIndex) << " on " << formatDate(date) << ".\n";
             continue;
         }
         return chosen;
@@ -790,7 +761,7 @@ static string chooseDentist(Date date, int slotIndex) {
 }
 
 static void editDraftField(int grid[][SLOTS_PER_DAY], Appointment& draft) {
-    int field = readInt("  Change which field? 1=Date  2=Timeslot  3=Reason  (0 to keep): ", 0, 3);
+    int field = readInt("  Change which field? 1=Date  2=Timeslot  3=Reason  (0 to cancel): ", 0, 3);
 
     switch (field) {
         case 1: {
@@ -804,7 +775,7 @@ static void editDraftField(int grid[][SLOTS_PER_DAY], Appointment& draft) {
                 if (newSlot < 0) return;
                 if (!patientHasSlot(draft.patientID, newDate, newSlot, draft.appointmentID)) break;
                 cout << "  [!] " << draft.patientID << " already has an appointment at "
-                     << formatSlot(newSlot) << " on " << formatDate(newDate) << ".\n";
+                    << formatSlot(newSlot) << " on " << formatDate(newDate) << ".\n";
             }
             draft.date      = newDate;
             draft.slotIndex = newSlot;
@@ -819,7 +790,7 @@ static void editDraftField(int grid[][SLOTS_PER_DAY], Appointment& draft) {
                 if (newSlot < 0) return;
                 if (!patientHasSlot(draft.patientID, draft.date, newSlot, draft.appointmentID)) break;
                 cout << "  [!] " << draft.patientID << " already has an appointment at "
-                     << formatSlot(newSlot) << " on " << formatDate(draft.date) << ".\n";
+                    << formatSlot(newSlot) << " on " << formatDate(draft.date) << ".\n";
             }
             draft.slotIndex = newSlot;
             break;
@@ -861,7 +832,7 @@ void scheduleAppointment(const Session& current) {
         if (slotIndex < 0) return;
         if (!patientHasSlot(patientID, date, slotIndex, "")) break;
         cout << "  [!] " << patientID << " already has an appointment at "
-             << formatSlot(slotIndex) << " on " << formatDate(date) << ".\n";
+            << formatSlot(slotIndex) << " on " << formatDate(date) << ".\n";
     }
 
     string reason = readText("  Reason for visit: ");
@@ -886,7 +857,7 @@ void scheduleAppointment(const Session& current) {
                 buildScheduleGrid(grid, draft.appointmentID);
                 if (patientHasSlot(draft.patientID, draft.date, draft.slotIndex, draft.appointmentID)) {
                     cout << "  [!] " << draft.patientID
-                         << " was booked into that hour while you were deciding.\n";
+                        << " was booked into that hour while you were deciding.\n";
                     displayAvailableSlots(grid, draft.date);
                     int retry = chooseSlot(grid, draft.date);
                     if (retry < 0) { finished = true; break; }
@@ -941,9 +912,11 @@ void viewAppointments(const Session& current) {
 
     if (rows.empty()) {
         cout << "\n  No appointments match that filter.\n";
+        pauseForKey();
         return;
     }
     displayAppointmentTable(rows);
+    pauseForKey();
 }
 
 void modifyAppointment(const Session& current) {
@@ -983,7 +956,7 @@ void modifyAppointment(const Session& current) {
                 if (newSlot < 0) return;
                 if (!patientHasSlot(target.patientID, newDate, newSlot, target.appointmentID)) break;
                 cout << "  [!] " << target.patientID << " already has an appointment at "
-                     << formatSlot(newSlot) << " on " << formatDate(newDate) << ".\n";
+                    << formatSlot(newSlot) << " on " << formatDate(newDate) << ".\n";
             }
             break;
 
@@ -995,7 +968,7 @@ void modifyAppointment(const Session& current) {
                 if (newSlot < 0) return;
                 if (!patientHasSlot(target.patientID, newDate, newSlot, target.appointmentID)) break;
                 cout << "  [!] " << target.patientID << " already has an appointment at "
-                     << formatSlot(newSlot) << " on " << formatDate(newDate) << ".\n";
+                    << formatSlot(newSlot) << " on " << formatDate(newDate) << ".\n";
             }
             break;
 
@@ -1065,6 +1038,8 @@ static void assignDentist(const Session& current) {
     string chosen = chooseDentist(target.date, target.slotIndex);
     if (chosen.empty()) return;
 
+    if (!confirmPassword(current)) return;
+
     target.dentistID = chosen;
     saveAppointments();
 
@@ -1083,7 +1058,7 @@ static void displayScheduleGrid() {
     const int SLOT_WIDTH = 8;
     const int TABLE_WIDTH = DATE_WIDTH + SLOT_WIDTH * SLOTS_PER_DAY;
 
-    cout << "\n  Free appointments per hour (limited by dentists on duty)\n\n";
+    cout << "\n  Free appointments per hour (out of " << slotCapacity() << ")\n\n";
     cout << "  " << left << setw(DATE_WIDTH) << "Date";
     for (int slot = 0; slot < SLOTS_PER_DAY; slot++) {
         cout << setw(SLOT_WIDTH) << toShortSlot(slot);
@@ -1104,7 +1079,7 @@ static void displayScheduleGrid() {
         cout << "  " << left << setw(DATE_WIDTH) << label.str();
 
         for (int slot = 0; slot < SLOTS_PER_DAY; slot++) {
-            int capacity = slotCapacity(slot);
+            int capacity = slotCapacity();
             int free = capacity - grid[day][slot];
             string cell;
             if (capacity <= 0) {
@@ -1121,6 +1096,7 @@ static void displayScheduleGrid() {
         cout << "\n";
     }
     cout << "  " << string(TABLE_WIDTH, '-') << "\n";
+    pauseForKey();
 }
 
 void findNextAvailable() {
@@ -1137,11 +1113,14 @@ void findNextAvailable() {
     const int WANTED = 5;
 
     cout << "\n  Earliest openings from " << formatDate(start) << "\n";
-    cout << "  " << string(52, '-') << "\n";
+    cout << "  " << string(66, '-') << "\n";
+    cout << "  " << left << setw(5) << "No." << setw(14) << "Date"
+        << setw(12) << "Day" << setw(23) << "Timeslot" << "Availability\n";
+    cout << "  " << string(66, '-') << "\n";
 
     for (int day = startOffset; day < BOOKING_WINDOW && found < WANTED; day++) {
         for (int slot = 0; slot < SLOTS_PER_DAY && found < WANTED; slot++) {
-            if (grid[day][slot] < slotCapacity(slot)) {
+            if (grid[day][slot] < slotCapacity()) {
                 Date d = today;
                 d.day += day;
                 while (d.day > daysInMonth(d.month, d.year)) {
@@ -1150,37 +1129,20 @@ void findNextAvailable() {
                     if (d.month > 12) { d.month = 1; d.year++; }
                 }
                 found++;
-                cout << "  " << found << ". " << formatDate(d) << " (" << DAY_NAMES[dayOfWeek(d)] << ")  " << formatSlot(slot) << "   " << (slotCapacity(slot) - grid[day][slot]) << " free\n";
+                stringstream freeText;
+                freeText << (slotCapacity() - grid[day][slot]) << " free";
+                cout << "  " << left << setw(5) << found
+                    << setw(14) << formatDate(d)
+                    << setw(12) << DAY_NAMES[dayOfWeek(d)]
+                    << setw(23) << formatSlot(slot)
+                    << freeText.str() << "\n";
             }
         }
     }
 
     if (found == 0) cout << "  No openings left inside the booking window.\n";
-    cout << "  " << string(52, '-') << "\n";
-}
-
-static void appointmentMenuPatient(const Session& current) {
-    int choice;
-    do {
-        printModuleHeader("Appointments - " + current.name);
-        cout << "\n  1. Schedule an appointment\n";
-        cout << "  2. View my appointments\n";
-        cout << "  3. Modify an appointment\n";
-        cout << "  4. Cancel an appointment\n";
-        cout << "  5. Find the next available slot\n";
-        cout << "  0. Back\n";
-
-        choice = readInt("\n  Choice: ", 0, 5);
-
-        switch (choice) {
-            case 1: scheduleAppointment(current); break;
-            case 2: viewAppointments(current);    break;
-            case 3: modifyAppointment(current);   break;
-            case 4: cancelAppointment(current);   break;
-            case 5: findNextAvailable();          break;
-            case 0: break;
-        }
-    } while (choice != 0);
+    cout << "  " << string(66, '-') << "\n";
+    pauseForKey();
 }
 
 static void appointmentMenuReception(const Session& current) {
@@ -1231,9 +1193,6 @@ static void appointmentMenuDentist(const Session& current) {
 
 void appointmentMenu(const Session& current) {
     switch (current.role) {
-        case PATIENT:
-            appointmentMenuPatient(current);
-            break;
         case DENTIST:
             appointmentMenuDentist(current);
             break;
@@ -1242,7 +1201,7 @@ void appointmentMenu(const Session& current) {
             appointmentMenuReception(current);
             break;
         default:
-            cout << "  [!] This user role has no appointment options.\n";
+            cout << "  [!] Patients reach these actions from their own menu.\n";
     }
 }
 

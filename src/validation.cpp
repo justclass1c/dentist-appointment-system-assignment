@@ -1,23 +1,17 @@
 #include <string>
+#include <vector>
 #include <regex>
+#include <cctype>
 
 using namespace std;
 
 bool validateName(string input) {
-
-    return true;
+    const regex nameFormat(R"(^[A-Za-z][A-Za-z .'-]{1,49}$)");
+    return regex_match(input, nameFormat);
 }
 
 bool validatePatientAge(int input) {
-    try {
-
-        if (input >= 1 && input <= 120) {
-            return true;
-        } else return false;
-
-    } catch(...) {
-        return false;
-    }
+    return input >= 18 && input <= 120;
 }
 
 bool validateGender(char input) {
@@ -25,20 +19,38 @@ bool validateGender(char input) {
     else return false;
 }
 
-bool validateNRIC(string input) {
+template<typename T>
+bool validateNRIC(string input, const vector<T>& users) {
     const regex nricFormat(R"(^\d{6}-\d{2}-\d{4}$)");
-    return regex_match(input, nricFormat);
+    if (regex_match(input, nricFormat)) {
+        for (auto u : users) {
+            if (input == u.user.nric) return false;
+        }
+
+        return true;
+    }
+
+    return false;
 }
 
-bool validateEmail(string input) {
-    const regex emailFormat(R"(^\w+@\w+.com)");
-    return regex_match(input, emailFormat);
+template<typename T>
+bool validateEmail(const T& targetUser, const vector<T>& users) {
+    const regex emailFormat(R"(^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$)");
+    if (regex_match(targetUser.user.email, emailFormat)) {
+        for (auto u : users) {
+            if (u.user.email == targetUser.user.email) return false;
+        }
+
+        return true;
+    }
+
+    return false;
 }
 
 bool validatePassword(string input) {
-
-    return true;
+    return !input.empty();
 }
+
 bool validatePhoneNo(string input) {
     const regex phoneNoFormat(R"(^01\d-\d{3,4} \d{4}$)");
 

@@ -1,6 +1,7 @@
 #ifndef CONSOLE_H
 #define CONSOLE_H
 
+#include <cctype>
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -29,6 +30,31 @@ inline string askInPlace(const string& label, const string& note) {
 inline void acceptInPlace(const string& label, const string& answer) {
     clearLine();
     cout << label << answer << endl;
+}
+
+inline int toIntOr(const string& text, int fallback) {
+    size_t first = text.find_first_not_of(" \t\r\n");
+    if (first == string::npos) return fallback;
+    size_t last = text.find_last_not_of(" \t\r\n");
+    string t = text.substr(first, last - first + 1);
+
+    for (size_t i = 0; i < t.length(); i++) {
+        if (i == 0 && (t[i] == '-' || t[i] == '+')) continue;
+        if (!isdigit((unsigned char)t[i])) return fallback;
+    }
+
+    stringstream parse(t);
+    int value = fallback;
+    if (!(parse >> value)) return fallback;
+    return value;
+}
+
+inline void pauseForKey() {
+    cout << "\n  Press Enter to continue... " << flush;
+    string discard;
+    getline(cin, discard);
+    stayOnPromptLine();
+    clearLine();
 }
 
 inline int readMenuChoice(const string& label, int low, int high) {

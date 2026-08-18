@@ -1,4 +1,0 @@
-D001,jackjacj,22,nk@gg.com,123
-D002,,1,1,1
-D003,jackdaripper,50,jack@gmail.com,111
-D004,Wicky,35,wicky@gmail.com,wicky

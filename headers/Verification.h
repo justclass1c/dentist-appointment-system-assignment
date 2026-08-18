@@ -10,6 +10,6 @@ template <typename U>
 bool verifyEmail(const vector<U>& users, string input);
 
 template <typename U>
-bool verifyPassword(const vector<U>& users, string input);
+bool verifyPassword(const vector<U>& users, string email, string input);
 
 #endif

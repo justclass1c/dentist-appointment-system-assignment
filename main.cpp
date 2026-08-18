@@ -28,7 +28,6 @@ void printWelcomeMenu() {
 
 int main() {
     loadDentists();
-    loadSlots();
     loadAppointments();
 
     printWelcomeMenu();
