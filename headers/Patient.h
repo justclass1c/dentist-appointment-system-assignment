@@ -11,6 +11,7 @@ using namespace std;
 struct Patient {
     User user;
     string allergies;
+    bool hasInsurance = false; // added: needed so Payment module can auto-apply insurance discount
 };
 
 vector<Patient> loadPatients();
@@ -18,7 +19,5 @@ void registerPatient(vector<Patient>& patients);
 void loginPatient(vector<Patient>& patients);
 void savePatients(vector<Patient> patients);
 void viewPatientProfile(vector<Patient> patients, string currentUserID);
-
-void mainMenu(vector<Patient> patients, const Session& current);
-
+Patient* findPatientByID(vector<Patient>& patients, const string& id); // added: lookup used by Payment module
 #endif

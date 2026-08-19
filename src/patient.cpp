@@ -173,44 +173,28 @@ void registerPatient(vector<Patient>& patients) {
 
     cout << "\nNew patient registration. (0 at Name to go back)" << endl;
 
-    while (true) {
+        // added: capture insurance status at registration so Payment module
+        // can automatically apply the insurance discount later without re-asking
+        char insuranceAns;
+        cout << "Do you have dental insurance coverage? (Y/N): ";
+        cin >> insuranceAns;
+        cin.ignore();
+        p.hasInsurance = (toupper(insuranceAns) == 'Y');
+
+        patients.push_back(p);
 
         p.user.id = nextPatientId(patients);
 
-        string note, name;
-        while (true) {
-            name = trimInput(askInPlace("Name: ", note));
-            if (!cin || name == "0") {
-                clearLine();
-                cout << "Registration cancelled. Nothing was saved." << endl;
-                return;
-            }
-            if (name.empty())          { note = "[cannot be blank] "; continue; }
-            if (!validateName(name))   { note = "[letters, spaces, - and ' only] "; continue; }
-            acceptInPlace("Name: ", name);
-            break;
-        }
-        p.user.name = name;
-
-        p.user.age     = askAge("Age (18-120): ");
-        p.user.gender  = askGender("Gender (M/F): ");
-        /* NRIC and email use main's template validators, which check the
-         * format AND that no existing patient already holds the value, so
-         * they need the whole roster and cannot go through askField(). */
-        string nricNote;
-        while (true) {
-            string typed = trimInput(askInPlace("NRIC (e.g. 010101-01-0101): ", nricNote));
-            if (!cin) { p.user.nric = typed; break; }
-
-            if (typed.empty()) { nricNote = "[cannot be blank] "; continue; }
-            if (!validateNRIC(typed, patients)) {
-                nricNote = "[use xxxxxx-xx-xxxx, and not already registered] ";
-                continue;
-            }
-            acceptInPlace("NRIC (e.g. 010101-01-0101): ", typed);
-            p.user.nric = typed;
-            break;
-        }
+    cout << "Your Profile (Patient ID: P" << patients.size() + 1 <<")";
+    cout << "Name: " << p.user.name << endl;
+    cout << "Age: " << p.user.age << endl;
+    cout << "Gender: " << p.user.gender << endl;
+    cout << "NRIC: " << p.user.nric << endl;
+    cout << "Email: " << p.user.email << endl;
+    cout << "Phone No.: " << p.user.phoneNo << endl;
+    cout << "Allergies: " << p.allergies << endl;
+    cout << "Insurance: " << (p.hasInsurance ? "Yes" : "No") << endl;
+    cout << "Confirm registration?" << endl;
 
         /* validateEmail() reads targetUser.user.email, so the typed value is
          * written into the record first and rolled back if it is rejected. */
@@ -342,7 +326,7 @@ vector<Patient> loadPatients() {
     while(getline(inFile, line)) {
         stringstream ss(line);
 
-        string ageStr, genderStr;
+        string ageStr, genderStr, insuranceStr;
         getline(ss, id, ';');
         getline(ss, name, ';');
         getline(ss, ageStr, ';');    age = toIntOr(ageStr, 0);
@@ -351,7 +335,8 @@ vector<Patient> loadPatients() {
         getline(ss, email, ';');
         getline(ss, password, ';');
         getline(ss, phoneNo, ';');
-        getline(ss, allergies);
+        getline(ss, allergies, ';');
+        getline(ss, insuranceStr); // added: last field, no trailing delimiter
 
         if (trimInput(id).empty()) continue;
         if (trimInput(email).empty()) continue;
@@ -366,6 +351,7 @@ vector<Patient> loadPatients() {
         patient.user.password = password;
         patient.user.phoneNo = phoneNo;
         patient.allergies = allergies;
+        patient.hasInsurance = (!insuranceStr.empty() && insuranceStr[0] == '1'); // added
 
         p.push_back(patient);
     }
@@ -381,7 +367,7 @@ void savePatients(vector<Patient> patients) {
     ofstream outFile("data/patients.txt");
 
     for (Patient patient : patients) {
-        outFile << patient.user.id << ";" << patient.user.name << ";" << patient.user.age << ";" << patient.user.gender << ";" << patient.user.nric << ";" << patient.user.email << ";" << patient.user.password << ";" << patient.user.phoneNo << ";" << patient.allergies << endl;
+        outFile << patient.user.name << ";" << patient.user.age << ";" << patient.user.gender << ";" << patient.user.nric << ";" << patient.user.email << ";" << patient.user.password << ";" << patient.user.phoneNo << ";" << patient.allergies << ";" << (patient.hasInsurance ? "1" : "0") << endl;
     }
 
     outFile.close();
@@ -399,8 +385,20 @@ void viewPatientProfile(vector<Patient> patients, string currentUserID) {
             cout << "Email: " << patient.user.email << endl;
             cout << "NRIC: " << patient.user.nric << endl;
             cout << "Contact: " << patient.user.phoneNo << endl;
+            cout << "Insurance: " << (patient.hasInsurance ? "Yes" : "No") << endl;
 
             break;
         }
     }
+}
+
+// added: lookup helper so the Payment module can pull a patient's age/insurance
+// status directly by ID instead of asking the receptionist to re-enter it
+Patient* findPatientByID(vector<Patient>& patients, const string& id) {
+    for (Patient& patient : patients) {
+        if (patient.user.id == id) {
+            return &patient;
+        }
+    }
+    return nullptr;
 }
