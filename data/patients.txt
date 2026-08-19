@@ -1,1 +1,2 @@
-P001;Liew;18;M;060930-10-1234;liew@gmail.com;liew;012-123 4567;none
+P001;Sun Ting Wong;2;M;052342-23-2342;suntingwong@gmail.com;balls;017-230 2342;water
+P002;Lim Ah Kau;10;M;052342-23-2342;limahkau@gmail.com;ball;017-235 2342;water

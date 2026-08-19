@@ -246,7 +246,6 @@ void registerPatient(vector<Patient>& patients) {
             return;
         }
         cout << "\nRe-enter your details." << endl;
-    }
 }
 
 void loginPatient(vector<Patient>& patients) {
@@ -367,7 +366,7 @@ void savePatients(vector<Patient> patients) {
     ofstream outFile("data/patients.txt");
 
     for (Patient patient : patients) {
-        outFile << patient.user.name << ";" << patient.user.age << ";" << patient.user.gender << ";" << patient.user.nric << ";" << patient.user.email << ";" << patient.user.password << ";" << patient.user.phoneNo << ";" << patient.allergies << ";" << (patient.hasInsurance ? "1" : "0") << endl;
+        outFile << patient.user.id << ";" << patient.user.name << ";" << patient.user.age << ";" << patient.user.gender << ";" << patient.user.nric << ";" << patient.user.email << ";" << patient.user.password << ";" << patient.user.phoneNo << ";" << patient.allergies << ";" << (patient.hasInsurance ? "1" : "0") << endl;
     }
 
     outFile.close();

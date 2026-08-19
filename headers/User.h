@@ -2,6 +2,7 @@
 #define USER_H
 
 #include <string>
+#include <vector>
 
 using namespace std;
 
@@ -14,5 +15,11 @@ struct User {
 enum Roles {
     PATIENT, DENTIST, RECEPTIONIST, ADMIN
 };
+
+void assignCurrentUser(User u);
+
+template <typename U>
+string getUsername();
+
 
 #endif
