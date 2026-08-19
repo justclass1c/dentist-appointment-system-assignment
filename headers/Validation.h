@@ -1,8 +1,8 @@
 #ifndef VALIDATION_H
 #define VALIDATION_H
 
-#include <random>
 #include <string>
+#include <vector>
 
 using namespace std;
 
@@ -15,6 +15,7 @@ bool validateNRIC(string input, const vector<T>& users);
 
 template<typename T>
 bool validateEmail(const T& user, const vector<T>& users);
+
 bool validatePassword(string input);
 bool validatePhoneNo(string input);
 

@@ -1,26 +1,17 @@
 #include <string>
+#include <vector>
 #include <regex>
+#include <cctype>
 
 using namespace std;
 
 bool validateName(string input) {
-    for (unsigned char i : input) {
-        if (isalpha(i)) {
-            return true;
-        }
-    }
-    return false;
+    const regex nameFormat(R"(^[A-Za-z][A-Za-z .'-]{1,49}$)");
+    return regex_match(input, nameFormat);
 }
 
 bool validatePatientAge(int input) {
-    try {
-        if (input >= 1 && input <= 120) {
-            return true;
-        } else return false;
-
-    } catch(...) {
-        return false;
-    }
+    return input >= 18 && input <= 120;
 }
 
 bool validateGender(char input) {
@@ -30,7 +21,7 @@ bool validateGender(char input) {
 
 template<typename T>
 bool validateNRIC(string input, const vector<T>& users) {
-    const regex nricFormat(R"(^\d{6}-\d{2}-\d{4}$)"); // check for xxxxxx-xx-xxxx
+    const regex nricFormat(R"(^\d{6}-\d{2}-\d{4}$)");
     if (regex_match(input, nricFormat)) {
         for (auto u : users) {
             if (input == u.user.nric) return false;
@@ -57,8 +48,7 @@ bool validateEmail(const T& targetUser, const vector<T>& users) {
 }
 
 bool validatePassword(string input) {
-    // implement confirm password
-    return true;
+    return !input.empty();
 }
 
 bool validatePhoneNo(string input) {
@@ -66,4 +56,3 @@ bool validatePhoneNo(string input) {
 
     return regex_match(input, phoneNoFormat);
 }
-
