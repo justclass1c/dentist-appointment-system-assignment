@@ -4,8 +4,12 @@
 using namespace std;
 
 bool validateName(string input) {
-    // wip
-    return true;
+    for (unsigned char i : input) {
+        if (isalpha(i)) {
+            return true;
+        }
+    }
+    return false;
 }
 
 bool validatePatientAge(int input) {
@@ -35,6 +39,18 @@ bool validateEmail(string input) {
     return regex_match(input, emailFormat);
 };
 
+<<<<<<< Updated upstream
+=======
+        return true;
+    } 
+    return false;
+}
+
+bool validatePassword(string input) {
+    // implement confirm password
+    return true;
+}
+>>>>>>> Stashed changes
 bool validatePhoneNo(string input) {
     const regex phoneNoFormat(R"(^01\d-\d{3,4} \d{4}$)");
 
