@@ -8,14 +8,14 @@ bool verifyEmail(const vector<U>& users, string input) {
     for (auto user: users) {
         if (input == user.user.email) return true;
     }
-
+    cout << "Email format invalid, please try again.\n";
     return false;
 }
 
 template <typename U>
-bool verifyPassword(const vector<U>& users, string input) {
+bool verifyPassword(const vector<U>& users, string email, string input) {
     for (auto user: users) {
-        if (input == user.user.password) return true;
+        if (email == user.user.email) return input == user.user.password;
     }
 
     return false;

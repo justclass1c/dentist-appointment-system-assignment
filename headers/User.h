@@ -11,8 +11,6 @@ struct User {
     char gender;
 };
 
-void assignCurrentUser(User u);
-
 enum Roles {
     PATIENT, DENTIST, RECEPTIONIST, ADMIN
 };
