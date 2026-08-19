@@ -1,10 +1,5 @@
 #include "../headers/Dentist.h"
 
-// ========================== File Names ==========================
-
-const string DENTIST_FILE = "dentists.txt";
-const string SLOT_FILE = "slots.txt";
-
 // Hardcoded reception credentials
 const string RECEPTION_USERNAME = "reception";
 const string RECEPTION_PASSWORD = "pass123";
@@ -35,8 +30,8 @@ vector<string> split(const string& s, char delim) {
 
 // ========================== File I/O ==========================
 
-void loadDentists() {
-    ifstream file(DENTIST_FILE);
+void loadDentists(vector<Dentist>& dentists) {
+    ifstream file("data/dentists.txt");
     if (!file.is_open()) return;
     string line;
     while (getline(file, line)) {
@@ -56,7 +51,7 @@ void loadDentists() {
 }
 
 void saveDentists() {
-    ofstream file(DENTIST_FILE);
+    
     for (const Dentist& d : dentists) {
         file << d.user.id << "," << d.user.name << "," << d.user.age << ","
              << d.user.email << "," << d.user.password << "\n";
@@ -65,7 +60,7 @@ void saveDentists() {
 }
 
 void loadSlots() {
-    ifstream file(SLOT_FILE);
+    ifstream file("data/slots.txt");
     if (!file.is_open()) return;
     string line;
     while (getline(file, line)) {
@@ -83,7 +78,7 @@ void loadSlots() {
 }
 
 void saveSlots() {
-    ofstream file(SLOT_FILE);
+    ofstream file("data/slots.txt");
     for (const auto& s : slots) {
         file << s.dentistId << "," << s.start << "," << s.end << ","
              << (s.available ? "1" : "0") << "\n";
@@ -100,8 +95,8 @@ Dentist* findDentistById(const string& id) {
     return nullptr;
 }
 
-Dentist* findDentistByName(const string& name) {
-    for (auto& d : dentists) {
+Dentist* findDentistByEmail(const string email) {
+    for (auto& d : dentists) {       
         if (d.user.name == name) return &d;
     }
     return nullptr;
@@ -179,7 +174,7 @@ void adminRegisterDentist() {
 
     cout << "Enter name: ";
     cin.ignore();
-    getline(cin, d.user.name);
+    getline(cin, d.name);
     cout << "Enter age: ";
     cin >> d.user.age;
     cout << "Enter email: ";
@@ -293,8 +288,8 @@ void receptionMenu() {
                 else cout << "Wrong name\n";
                 
             case 3:
-                cout << "Logging out from reception.\n";
-                return;
+                cout << "Logged out from reception.\n";
+                return; //when return will quit programe, @jason please fix it (i dunno how to fix)
             default:
                 cout << "Invalid choice.\n";
         }
@@ -401,28 +396,26 @@ void dentistMenu(Dentist* d) {
         } else if (choice == 2) {
             while (true) {
                 cout << "\n--- Manage Slots ---\n";
-                cout << "1. View schedule\n";
-                cout << "2. Add new slot\n";
-                cout << "3. Remove slot\n";
-                cout << "4. Lock a slot (set unavailable)\n";
-                cout << "5. Unlock a slot (set available)\n";
-                cout << "6. Back\n";
+                cout << "1. Add new slot\n";
+                cout << "2. Remove slot\n";
+                cout << "3. Lock a slot (set unavailable)\n";
+                cout << "4. Unlock a slot (set available)\n";
+                cout << "5. Back\n";
                 cout << "Choose: ";
                 int sub;
                 cin >> sub;
                 switch (sub) {
-                    case 1: dentistViewSchedule(d); break;
-                    case 2: dentistAddSlot(d); break;
-                    case 3: dentistRemoveSlot(d); break;
-                    case 4: dentistLockSlot(d); break;
-                    case 5: dentistUnlockSlot(d); break;
-                    case 6: goto back;
+                    case 1: dentistAddSlot(d); break;
+                    case 2: dentistRemoveSlot(d); break;
+                    case 3: dentistLockSlot(d); break;
+                    case 4: dentistUnlockSlot(d); break;
+                    case 5: goto back;
                     default: cout << "Invalid choice.\n";
                 }
             }
             back: ;
         } else if (choice == 3) {
-            cout << "Logging out.\n";
+            cout << "Logged out.\n\n";
             return;
         } else {
             cout << "Invalid choice.\n";
@@ -432,13 +425,9 @@ void dentistMenu(Dentist* d) {
 
 // ========================== Login Functions ==========================
 
-void loginDentist() {
-    string name, pass;
-    cout << "Enter dentist name: ";
-    cin.ignore();
-    getline(cin, name);
-    cout << "Enter password: ";
-    getline(cin, pass);
+// void errorMsg() {
+//     cout << "Dentist not found. Please try again.\n";
+// }
 
     Dentist* d = findDentistByName(name);
     if (d == nullptr) {
