@@ -44,8 +44,8 @@ static string askNonBlank(const string& label) {
     }
 }
 
-void loadDentists() {
-    ifstream file(DENTIST_FILE);
+void loadDentists(vector<Dentist>& dentists) {
+    ifstream file("data/dentists.txt");
     if (!file.is_open()) return;
     string line;
     while (getline(file, line)) {
@@ -83,8 +83,8 @@ Dentist* findDentistById(const string& id) {
     return nullptr;
 }
 
-Dentist* findDentistByName(const string& name) {
-    for (auto& d : dentists) {
+Dentist* findDentistByEmail(const string email) {
+    for (auto& d : dentists) {       
         if (d.user.name == name) return &d;
     }
     return nullptr;
