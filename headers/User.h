@@ -16,10 +16,10 @@ enum Roles {
     PATIENT, DENTIST, RECEPTIONIST, ADMIN
 };
 
-void assignCurrentUser(User u);
+template <typename U>
+void assignCurrentUser(const vector<U>& users, string id);
 
 template <typename U>
-string getUsername();
-
+string getUsername(const vector<U>& users, string id);
 
 #endif

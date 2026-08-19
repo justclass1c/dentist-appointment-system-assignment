@@ -48,7 +48,7 @@ static void printPatientMenu(const Session& current) {
     cout << "0. Logout" << endl;
 }
 
-void mainMenu(vector<Patient> patients, const Session& current) {
+void mainMenu(vector<Patient>& patients, const Session& current) {
 
     string line, note;
     bool showMenu = true;
@@ -168,59 +168,95 @@ static char askLetter(const string& label, const string& allowed, const string& 
     }
 }
 
-void registerPatient(vector<Patient>& patients) {
+Patient inputPatientDetails(string id, vector<Patient>& patients) {
     Patient p;
+    p.user.id = id;
 
-    cout << "\nNew patient registration. (0 at Name to go back)" << endl;
+    // name with 0 = go back, befitting Console-style prompts
+    string nameNote;
+    while (true) {
+        string typed = trimInput(askInPlace("Name: ", nameNote));
+        if (!cin) return p;
 
-        // added: capture insurance status at registration so Payment module
-        // can automatically apply the insurance discount later without re-asking
-        char insuranceAns;
-        cout << "Do you have dental insurance coverage? (Y/N): ";
-        cin >> insuranceAns;
-        cin.ignore();
-        p.hasInsurance = (toupper(insuranceAns) == 'Y');
-
-        patients.push_back(p);
-
-        p.user.id = nextPatientId(patients);
-
-    cout << "Your Profile (Patient ID: P" << patients.size() + 1 <<")";
-    cout << "Name: " << p.user.name << endl;
-    cout << "Age: " << p.user.age << endl;
-    cout << "Gender: " << p.user.gender << endl;
-    cout << "NRIC: " << p.user.nric << endl;
-    cout << "Email: " << p.user.email << endl;
-    cout << "Phone No.: " << p.user.phoneNo << endl;
-    cout << "Allergies: " << p.allergies << endl;
-    cout << "Insurance: " << (p.hasInsurance ? "Yes" : "No") << endl;
-    cout << "Confirm registration?" << endl;
-
-        /* validateEmail() reads targetUser.user.email, so the typed value is
-         * written into the record first and rolled back if it is rejected. */
-        string emailNote;
-        while (true) {
-            string typed = trimInput(askInPlace("Email (e.g. name@example.com): ", emailNote));
-            if (!cin) { p.user.email = typed; break; }
-
-            if (typed.empty()) { emailNote = "[cannot be blank] "; continue; }
-
-            p.user.email = typed;
-            if (!validateEmail(p, patients)) {
-                p.user.email.clear();
-                emailNote = "[use name@example.com, and not already registered] ";
-                continue;
-            }
-            acceptInPlace("Email (e.g. name@example.com): ", typed);
+        if (typed == "0") { p.user.name = "0"; return p; }
+        if (typed.empty()) { nameNote = "[cannot be blank] "; continue; }
+        if (validateName(typed)) {
+            p.user.name = typed;
+            acceptInPlace("Name: ", typed);
             break;
         }
+        nameNote = "[letters/spaces only] ";
+    }
 
-        p.user.password = askField("Password: ", "[cannot be blank] ", validatePassword);
-        p.user.phoneNo = askField("Phone Number (e.g. 012-345 6789): ", "[use 01x-xxx xxxx] ", validatePhoneNo);
+    p.user.age = askAge("Age (18-120): ");
+    p.user.gender = askGender("Gender (M/F): ");
 
-        p.allergies = trimInput(askInPlace("Allergies (or 'none'): ", ""));
-        if (p.allergies.empty()) p.allergies = "none";
-        acceptInPlace("Allergies (or 'none'): ", p.allergies);
+    string nricNote;
+    while (true) {
+        string typed = trimInput(askInPlace("NRIC (e.g. 000000-00-0000): ", nricNote));
+        if (!cin) { p.user.nric = typed; break; }
+
+        if (typed.empty()) { nricNote = "[cannot be blank] "; continue; }
+
+        p.user.nric = typed;
+        if (!validateNRIC(p.user.nric, patients)) {
+            p.user.nric.clear();
+            nricNote = "[use 000000-00-0000, and not already registered] ";
+            continue;
+        }
+        acceptInPlace("NRIC (e.g. 000000-00-0000): ", typed);
+        break;
+    }
+
+    string emailNote;
+    while (true) {
+        string typed = trimInput(askInPlace("Email (e.g. name@example.com): ", emailNote));
+        if (!cin) { p.user.email = typed; break; }
+
+        if (typed.empty()) { emailNote = "[cannot be blank] "; continue; }
+
+        p.user.email = typed;
+        if (!validateEmail(p, patients)) {
+            p.user.email.clear();
+            emailNote = "[use name@example.com, and not already registered] ";
+            continue;
+        }
+        acceptInPlace("Email (e.g. name@example.com): ", typed);
+        break;
+    }
+
+    p.user.password = askField("Password: ", "[cannot be blank] ", validatePassword);
+    p.user.phoneNo = askField("Phone Number (e.g. 012-345 6789): ", "[use 01x-xxx xxxx] ", validatePhoneNo);
+
+    p.allergies = trimInput(askInPlace("Allergies (or 'none'): ", ""));
+    if (p.allergies.empty()) p.allergies = "none";
+    acceptInPlace("Allergies (or 'none'): ", p.allergies);
+
+    // added: capture insurance status so Payment module can auto-apply the discount
+    char insuranceAns;
+    cout << "Do you have dental insurance coverage? (Y/N): ";
+    cin >> insuranceAns;
+    cin.ignore();
+    p.hasInsurance = (toupper(insuranceAns) == 'Y');
+
+    return p;
+}
+
+void createPatient(Patient patient, vector<Patient>& patients) {
+    patients.push_back(patient);
+    savePatients(patients);
+}
+
+void registerPatient(vector<Patient>& patients) {
+    cout << "\nNew patient registration. (0 at Name to go back)" << endl;
+
+    while (true) {
+        Patient p = inputPatientDetails(nextPatientId(patients), patients);
+
+        if (trimInput(p.user.name) == "0") {
+            cout << "Registration cancelled." << endl;
+            return;
+        }
 
         cout << "\nYour Profile (Patient ID: " << p.user.id << ")" << endl;
         cout << "Name: "      << p.user.name    << endl;
@@ -230,15 +266,15 @@ void registerPatient(vector<Patient>& patients) {
         cout << "Email: "     << p.user.email   << endl;
         cout << "Phone No.: " << p.user.phoneNo << endl;
         cout << "Allergies: " << p.allergies    << endl;
+        cout << "Insurance: " << (p.hasInsurance ? "Yes" : "No") << endl;
 
         char answer = askLetter("Confirm registration? (Y = Yes / N = No / M = Modify): ",
                                 "YNM", "[Y, N or M] ");
 
         if (answer == 'Y') {
-            patients.push_back(p);
-            savePatients(patients);
+            createPatient(p, patients);
             cout << "\nRegistered. Your patient ID is " << p.user.id
-                << " - log in with your email and password." << endl;
+                << " - log in with your ID and password." << endl;
             return;
         }
         if (answer == 'N') {
@@ -246,32 +282,33 @@ void registerPatient(vector<Patient>& patients) {
             return;
         }
         cout << "\nRe-enter your details." << endl;
+    }
 }
 
 void loginPatient(vector<Patient>& patients) {
-    string email, password;
+    string id, password;
 
     cout << "Please login. (0 to go back)" << endl;
 
     string note;
     while (true) {
         clearLine();
-        cout << note << "Email: " << flush;
-        getline(cin, email);
+        cout << note << "ID: " << flush;
+        getline(cin, id);
         stayOnPromptLine();
 
-        if (trimInput(email) == "0" || !cin) {
+        if (trimInput(id) == "0" || !cin) {
             clearLine();
             cout << "Login cancelled." << endl;
             return;
         }
 
-        if (trimInput(email).empty()) { note = "[cannot be blank] "; continue; }
-        if (verifyEmail(patients, email)) break;
-        note = "[no account with that email] ";
+        if (trimInput(id).empty()) { note = "[cannot be blank] "; continue; }
+        if (verifyID(patients, id)) break;
+        note = "[no account with that ID] ";
     }
     clearLine();
-    cout << "Email: " << email << endl;
+    cout << "ID: " << id << endl;
 
     note.clear();
     while (true) {
@@ -287,24 +324,28 @@ void loginPatient(vector<Patient>& patients) {
         }
 
         if (password.empty()) { note = "[cannot be blank] "; continue; }
-        if (verifyPassword(patients, email, password)) break;
+
+        Patient* account = findPatientByID(patients, id);
+        if (account != nullptr && password == account->user.password) break;
         note = "[incorrect password] ";
     }
     clearLine();
     cout << "Password: " << string(password.length(), '*') << endl;
 
-    assignCurrentUser(patients, email);
+    assignCurrentUser(patients, id);
 
     Session current;
     current.role = PATIENT;
     for (const Patient& p : patients) {
-        if (p.user.email == email) {
+        if (p.user.id == id) {
             current.userId   = p.user.id;
             current.name     = p.user.name;
             current.password = p.user.password;
             break;
         }
     }
+
+    current.name = getUsername(patients, id);
 
     mainMenu(patients, current);
 }
@@ -372,23 +413,124 @@ void savePatients(vector<Patient> patients) {
     outFile.close();
 }
 
-void viewPatientProfile(vector<Patient> patients, string currentUserID) {
-    for (Patient patient : patients) {
-        if (currentUserID == patient.user.id) {
-            cout << "Your Profile:" << endl;
-            cout << "Patient ID: " << patient.user.id << endl;
-            cout << "Name: " << patient.user.name << endl;
-            cout << "Age: " << patient.user.age << endl;
-            char g = toupper(patient.user.gender);
-            cout << "Gender: " << (g == 'M' ? "Male" : g == 'F' ? "Female" : "Not recorded") << endl;
-            cout << "Email: " << patient.user.email << endl;
-            cout << "NRIC: " << patient.user.nric << endl;
-            cout << "Contact: " << patient.user.phoneNo << endl;
-            cout << "Insurance: " << (patient.hasInsurance ? "Yes" : "No") << endl;
+void viewPatientProfile(vector<Patient>& patients, string currentUserID) {
+    Patient* target = findPatientByID(patients, currentUserID);
+    if (target == nullptr) return;
 
-            break;
+    cout << "\nYour Profile:" << endl;
+    cout << "Patient ID: " << target->user.id << endl;
+    cout << "Name: " << target->user.name << endl;
+    cout << "Age: " << target->user.age << endl;
+    char g = toupper(target->user.gender);
+    cout << "Gender: " << (g == 'M' ? "Male" : g == 'F' ? "Female" : "Not recorded") << endl;
+    cout << "Email: " << target->user.email << endl;
+    cout << "NRIC: " << target->user.nric << endl;
+    cout << "Contact: " << target->user.phoneNo << endl;
+    cout << "Insurance: " << (target->hasInsurance ? "Yes" : "No") << endl;
+
+    cout << "\nOptions: M = Modify, Q = Quit" << endl;
+
+    char input;
+    cin >> input;
+    cin.ignore();
+
+    if (toupper(input) == 'M') modifyPatient(patients, *target);
+}
+
+void modifyPatient(vector<Patient>& patients, Patient& patient) {
+    int index = 0;
+    string password, input;
+
+    do {
+        cout << "\nChoose a field to change." << endl;
+        cout << "Your Profile:" << endl;
+        cout << "1. Name   : " << patient.user.name << endl;
+        cout << "2. Age    : " << patient.user.age << endl;
+        cout << "3. Email  : " << patient.user.email << endl;
+        cout << "4. Contact: " << patient.user.phoneNo << endl;
+        cout << "0. Done" << endl;
+
+        cin >> index;
+        cin.ignore();
+
+        switch (index) {
+            case 1:
+                cout << "Change your name: ";
+                getline(cin, input);
+                do {
+                    cout << "Enter password: ";
+                    getline(cin, password);
+                } while (password != patient.user.password);
+                patient.user.name = input;
+                savePatients(patients);
+                cout << "Saved." << endl;
+                break;
+
+            case 2:
+                cout << "Change your age: ";
+                cin >> input;
+                cin.ignore();
+                while (!validatePatientAge(stoi(input))) {
+                    cout << "Invalid age (18-120). Try again: ";
+                    cin >> input;
+                    cin.ignore();
+                }
+                do {
+                    cout << "Enter password: ";
+                    getline(cin, password);
+                } while (password != patient.user.password);
+                patient.user.age = stoi(input);
+                savePatients(patients);
+                cout << "Saved." << endl;
+                break;
+
+            case 3:
+                for (;;) {
+                    cout << "Change your email: ";
+                    getline(cin, input);
+
+                    if (input.empty()) { cout << "[cannot be blank] "; continue; }
+
+                    patient.user.email = input;
+                    if (!validateEmail(patient, patients)) {
+                        patient.user.email.clear();
+                        cout << "[use name@example.com, and not already registered] ";
+                        continue;
+                    }
+                    break;
+                }
+                do {
+                    cout << "Enter password: ";
+                    getline(cin, password);
+                } while (password != patient.user.password);
+                savePatients(patients);
+                cout << "Saved." << endl;
+                break;
+
+            case 4:
+                cout << "Change your contact: ";
+                getline(cin, input);
+                while (!validatePhoneNo(input)) {
+                    cout << "Invalid phone (01x-xxx xxxx). Try again: ";
+                    getline(cin, input);
+                }
+                do {
+                    cout << "Enter password: ";
+                    getline(cin, password);
+                } while (password != patient.user.password);
+                patient.user.phoneNo = input;
+                savePatients(patients);
+                cout << "Saved." << endl;
+                break;
+
+            case 0:
+                break;
+
+            default:
+                cout << "Invalid input." << endl;
+                break;
         }
-    }
+    } while (index != 0);
 }
 
 // added: lookup helper so the Payment module can pull a patient's age/insurance
@@ -400,4 +542,24 @@ Patient* findPatientByID(vector<Patient>& patients, const string& id) {
         }
     }
     return nullptr;
+}
+
+void viewPatients(vector<Patient>& patients) {
+    if (patients.empty()) {
+        cout << "\nNo patients are registered yet.\n";
+        return;
+    }
+
+    cout << "\n  " << left << setw(8) << "ID" << setw(24) << "Name"
+        << setw(28) << "Email" << "Age\n";
+    cout << "  " << string(64, '-') << "\n";
+    for (size_t i = 0; i < patients.size(); i++) {
+        const Patient& p = patients[i];
+        cout << "  " << left << setw(8) << p.user.id
+            << setw(24) << (p.user.name.empty() ? "(no name on record)" : p.user.name)
+            << setw(28) << p.user.email << p.user.age << "\n";
+    }
+    cout << "  " << string(64, '-') << "\n";
+    cout << "  " << patients.size() << " patient(s).\n";
+    pauseForKey();
 }

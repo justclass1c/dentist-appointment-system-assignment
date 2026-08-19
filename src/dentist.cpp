@@ -2,6 +2,7 @@
 #include "../headers/Appointment.h"
 #include "../headers/Console.h"
 #include "../headers/Validation.h"
+#include "../headers/Patient.h"
 
 const string DENTIST_FILE = "data/dentists.txt";
 
@@ -287,16 +288,22 @@ void receptionMenu() {
     while (true) {
         cout << "\n--- Reception Menu ---\n";
         cout << "1. View all dentists\n";
-        cout << "2. Manage appointments\n";
+        cout << "2. View all patients\n";
+        cout << "3. Manage appointments\n";
         cout << "0. Logout\n";
 
-        int choice = readMenuChoice("Choose: ", 0, 2);
+        int choice = readMenuChoice("Choose: ", 0, 3);
 
         switch (choice) {
             case 1:
                 receptionViewAllDentists();
                 break;
             case 2: {
+                vector<Patient> allPatients = loadPatients();
+                viewPatients(allPatients);
+                break;
+            }
+            case 3: {
 
                 Session current;
                 current.userId   = "R001";
@@ -336,7 +343,7 @@ void dentistMenu(Dentist* d) {
 }
 
 void loginDentist() {
-    string name, pass, note;
+    string id, pass, note;
 
     if (dentists.empty()) {
         cout << "No dentists are registered yet.\n"
@@ -348,16 +355,16 @@ void loginDentist() {
 
     Dentist* d = nullptr;
     while (true) {
-        name = trim(askInPlace("Dentist name: ", note));
-        if (!cin || name == "0") { clearLine(); cout << "Login cancelled.\n"; return; }
+        id = trim(askInPlace("ID: ", note));
+        if (!cin || id == "0") { clearLine(); cout << "Login cancelled.\n"; return; }
 
-        if (name.empty()) { note = "[cannot be blank] "; continue; }
+        if (id.empty()) { note = "[cannot be blank] "; continue; }
 
-        d = findDentistByName(name);
+        d = findDentistById(id);
         if (d != nullptr) break;
-        note = "[no dentist with that name] ";
+        note = "[no dentist with that ID] ";
     }
-    acceptInPlace("Dentist name: ", name);
+    acceptInPlace("ID: ", id);
 
     note.clear();
     while (true) {
