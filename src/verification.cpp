@@ -1,5 +1,3 @@
-<<<<<<< Updated upstream
-=======
 #include <string>
 #include <vector>
 
@@ -22,4 +20,3 @@ bool verifyPassword(const vector<U>& users, string input) {
 
     return false;
 }
->>>>>>> Stashed changes

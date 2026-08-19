@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <cctype>
 #include <iomanip>
+#include "User.h"
 
 using namespace std;
 
@@ -20,11 +21,8 @@ const string adminName = "admin";
 const string adminPassword = "pass123";
 
 struct Dentist {
-    string id;          // unique ID (e.g., ID number)
-    string name;
-    int age;
-    string email;
-    string password;
+    User user;
+    string id;          // unique ID (e.g., D001)
 };
 
 struct TimeSlot {
@@ -81,6 +79,6 @@ void dentistMenu(Dentist* d);
 
 void loginDentist();
 void loginReception();
-void registerPatient();   // placeholder
+void registerPatientPlaceholder();   // placeholder
 
 #endif

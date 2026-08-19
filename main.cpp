@@ -1,7 +1,6 @@
 #include <iostream>
 #include "./src/patient.cpp"
 #include "./headers/Patient.h"
-#include "./src/dentist.cpp"
 #include "./headers/Dentist.h"
 #include "./src/dentist.cpp"
 #include <vector>

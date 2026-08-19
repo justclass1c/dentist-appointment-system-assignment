@@ -1,4 +1,4 @@
-#include "dentist.h"
+#include "../headers/Dentist.h"
 
 // Hardcoded reception credentials
 const string RECEPTION_USERNAME = "reception";
@@ -39,28 +39,22 @@ void loadDentists(vector<Dentist>& dentists) {
         vector<string> parts = split(line, ',');
         if (parts.size() < 5) continue;
         Dentist d;
+        d.user.id = parts[0];
         d.id = parts[0];
-        d.name = parts[1];
-        d.age = stoi(parts[2]);
-        d.email = parts[3];
-        d.password = parts[4];
+        d.user.name = parts[1];
+        d.user.age = stoi(parts[2]);
+        d.user.email = parts[3];
+        d.user.password = parts[4];
         dentists.push_back(d);
     }
     file.close();
 }
 
 void saveDentists() {
-<<<<<<< Updated upstream
-    ofstream file(DENTIST_FILE);
-    for (const auto& d : dentists) {
-        file << d.id << "," << d.name << "," << d.age << ","
-             << d.email << "," << d.password << "\n";
-=======
-    ofstream file("data/dentists.txt");
+    
     for (const Dentist& d : dentists) {
         file << d.user.id << "," << d.user.name << "," << d.user.age << ","
              << d.user.email << "," << d.user.password << "\n";
->>>>>>> Stashed changes
     }
     file.close();
 }
@@ -102,12 +96,8 @@ Dentist* findDentistById(const string& id) {
 }
 
 Dentist* findDentistByEmail(const string email) {
-    for (auto& d : dentists) {
-<<<<<<< Updated upstream
-        if (d.name == name) return &d;
-=======
-        if (d.user.email == email) return &d;
->>>>>>> Stashed changes
+    for (auto& d : dentists) {       
+        if (d.user.name == name) return &d;
     }
     return nullptr;
 }
@@ -144,10 +134,10 @@ bool removeSlot(const string& dentistId, const string& start, const string& end)
 
 void displayDentistInfo(const Dentist& d) {
     cout << "ID: " << d.id << "\n";
-    cout << "Name: " << d.name << "\n";
-    cout << "Age: " << d.age << "\n";
-    cout << "Email: " << d.email << "\n";
-    cout << "Password: " << d.password << "\n";
+    cout << "Name: " << d.user.name << "\n";
+    cout << "Age: " << d.user.age << "\n";
+    cout << "Email: " << d.user.email << "\n";
+    cout << "Password: " << d.user.password << "\n";
 }
 
 void displaySlots(const vector<TimeSlot>& slotList) {
@@ -170,42 +160,27 @@ void adminRegisterDentist() {
         d.id = "D001";
     } else {
         string lastId = dentists.back().id;
-        string numStr = lastId.substr(1); 
+        string numStr = lastId.substr(1);
         int num = stoi(numStr);
-        num++; 
+        num++;
         stringstream ss;
         ss << "D" << setw(3) << setfill('0') << num;
         d.id = ss.str();
     }
+    d.user.id = d.id;
     // -----------------------
 
     cout << "Generated Dentist ID: " << d.id << endl;
 
     cout << "Enter name: ";
     cin.ignore();
-<<<<<<< Updated upstream
     getline(cin, d.name);
     cout << "Enter age: ";
-    cin >> d.age;
+    cin >> d.user.age;
     cout << "Enter email: ";
-    cin >> d.email;
+    cin >> d.user.email;
     cout << "Enter password: ";
-    cin >> d.password;
-=======
-    getline(cin, d.user.name);
-    do {
-        cout << "Enter age: ";
-        cin >> d.user.age;
-    } while (!validatePatientAge(d.user.age));
-    do {
-        cout << "Enter email: ";
-        cin >> d.user.email;
-    } while (!validateEmail(d, dentists));
-    do {
-        cout << "Enter password: ";
-        cin >> d.user.password;
-    } while (!validatePassword(d.user.password));
->>>>>>> Stashed changes
+    cin >> d.user.password;
 
     dentists.push_back(d);
     saveDentists();
@@ -230,21 +205,21 @@ void adminModifyDentist() {
     string input;
     cin.ignore();
 
-    cout << "Name [" << d->name << "]: ";
+    cout << "Name [" << d->user.name << "]: ";
     getline(cin, input);
-    if (!input.empty()) d->name = input;
+    if (!input.empty()) d->user.name = input;
 
-    cout << "Age [" << d->age << "]: ";
+    cout << "Age [" << d->user.age << "]: ";
     getline(cin, input);
-    if (!input.empty()) d->age = stoi(input);
+    if (!input.empty()) d->user.age = stoi(input);
 
-    cout << "Email [" << d->email << "]: ";
+    cout << "Email [" << d->user.email << "]: ";
     getline(cin, input);
-    if (!input.empty()) d->email = input;
+    if (!input.empty()) d->user.email = input;
 
-    cout << "Password [" << d->password << "]: ";
+    cout << "Password [" << d->user.password << "]: ";
     getline(cin, input);
-    if (!input.empty()) d->password = input;
+    if (!input.empty()) d->user.password = input;
 
     saveDentists();
     cout << "Dentist information updated.\n";
@@ -408,7 +383,7 @@ void dentistUnlockSlot(Dentist* d) {
 
 void dentistMenu(Dentist* d) {
     while (true) {
-        cout << "\n--- Dentist Menu (" << d->name << ") ---\n";
+        cout << "\n--- Dentist Menu (" << d->user.name << ") ---\n";
         cout << "1. View my schedule\n";
         cout << "2. Manage my time slots\n";
         cout << "3. Logout\n";
@@ -454,76 +429,17 @@ void dentistMenu(Dentist* d) {
 //     cout << "Dentist not found. Please try again.\n";
 // }
 
-<<<<<<< Updated upstream
     Dentist* d = findDentistByName(name);
     if (d == nullptr) {
         cout << "Dentist not found.\n";
         return;
     }
-    if (d->password != pass) {
+    if (d->user.password != pass) {
         cout << "Incorrect password.\n";
         return;
     }
-    cout << "Login successful. Welcome, " << d->name << "!\n";
+    cout << "Login successful. Welcome, " << d->user.name << "!\n";
     dentistMenu(d);
-=======
-void loginDentist() {
-    string pass, email, id;
-    Dentist* d = findDentistById(id);
-
-    do { 
-        cout << "Enter ID: ";
-        cin >> id;
-        d = findDentistById(id);
-        if (d == nullptr) {
-            cout << "Dentist not found. Please try again.\n";
-        }
-    } while (d == nullptr);
-
-    do { 
-        cout << "Enter password: ";
-        cin >> pass;
-        if (verifyPassword (dentists, pass)) {
-                cout << "Login successful. Welcome!\n";
-                dentistMenu(d);
-                return;
-        }
-        else {
-            cout << "Incorrect password. Please try again.\n";
-        }
-    } while (!verifyPassword(dentists, pass));
-
-    // do {
-    //     cout << "Enter dentist name: ";
-    //     cin.ignore();
-    //     getline(cin, name);
-    //     d = findDentistByName(name);
-    //     if (d == nullptr) {
-    //         cout << "Dentist not found.\n";
-    //         return;
-    // }
-
-    //     cout << "Enter password: ";
-    //     getline(cin, pass);
-    //     if (d->user.password != pass) {
-    //         cout << "Incorrect password.\n";
-    //         return;
-    //     }
-    // } while (d == nullptr || d->user.password != pass);
-
-    //Dentist* d = findDentistByName(name);
-    // if (d == nullptr) {
-    //     //cout << "Dentist not found.\n";
-    //     return invalidDentistName();
-    // }
-    // if (d->user.password != pass) {
-    //     cout << "Incorrect password.\n";
-    //     return;
-    // }
-
-    // cout << "Login successful. Welcome, " << d->user.id << "!\n";
-    // dentistMenu(d);
->>>>>>> Stashed changes
 }
 
 void loginReception() {
@@ -541,6 +457,6 @@ void loginReception() {
     }
 }
 
-void registerPatient() {
+void registerPatientPlaceholder() {
     cout << "Patient registration not implemented (placeholder).\n";
 }

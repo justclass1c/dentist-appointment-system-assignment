@@ -14,7 +14,6 @@ bool validateName(string input) {
 
 bool validatePatientAge(int input) {
     try {
-
         if (input >= 1 && input <= 120) {
             return true;
         } else return false;
@@ -29,20 +28,31 @@ bool validateGender(char input) {
     else return false;
 }
 
-bool validateNRIC(string input) {
+template<typename T>
+bool validateNRIC(string input, const vector<T>& users) {
     const regex nricFormat(R"(^\d{6}-\d{2}-\d{4}$)"); // check for xxxxxx-xx-xxxx
-    return regex_match(input, nricFormat);
+    if (regex_match(input, nricFormat)) {
+        for (auto u : users) {
+            if (input == u.user.nric) return false;
+        }
+
+        return true;
+    }
+
+    return false;
 }
 
-bool validateEmail(string input) {
-    const regex emailFormat(R"(^\w+@\w+.com)"); // upgrade to adapt to broader format
-    return regex_match(input, emailFormat);
-};
+template<typename T>
+bool validateEmail(const T& targetUser, const vector<T>& users) {
+    const regex emailFormat(R"(^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$)");
+    if (regex_match(targetUser.user.email, emailFormat)) {
+        for (auto u : users) {
+            if (u.user.email == targetUser.user.email) return false;
+        }
 
-<<<<<<< Updated upstream
-=======
         return true;
-    } 
+    }
+
     return false;
 }
 
@@ -50,7 +60,7 @@ bool validatePassword(string input) {
     // implement confirm password
     return true;
 }
->>>>>>> Stashed changes
+
 bool validatePhoneNo(string input) {
     const regex phoneNoFormat(R"(^01\d-\d{3,4} \d{4}$)");
 
