@@ -1,2 +1,3 @@
-P001;Sun Ting Wong;2;M;052342-23-2342;suntingwong@gmail.com;balls;017-230 2342;water
-P002;Lim Ah Kau;10;M;052342-23-2342;limahkau@gmail.com;ball;017-235 2342;water
+P001;Sun Ting Wong;23;M;052342-23-2342;suntingwong@gmail.com;balls;017-230 2342;water;0
+P002;Lim Ah Kau;10;M;052342-23-2342;limahkau@gmail.com;ball;017-235 2342;water;0
+P003;Henry;33;F;012323-12-3231;henry@gmail.com;henry;012-231 1232;none;1

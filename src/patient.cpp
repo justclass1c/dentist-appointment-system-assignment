@@ -38,6 +38,7 @@ static string nextPatientId(const vector<Patient>& patients) {
 }
 
 static void printPatientMenu(const Session& current) {
+    clearScreen();
     cout << "\nWelcome, " << current.name << "!" << endl;
     cout << "1. Schedule an appointment" << endl;
     cout << "2. View my appointments" << endl;
@@ -49,7 +50,6 @@ static void printPatientMenu(const Session& current) {
 }
 
 void mainMenu(vector<Patient>& patients, const Session& current) {
-
     string line, note;
     bool showMenu = true;
 
@@ -169,6 +169,7 @@ static char askLetter(const string& label, const string& allowed, const string& 
 }
 
 Patient inputPatientDetails(string id, vector<Patient>& patients) {
+    clearScreen();
     Patient p;
     p.user.id = id;
 
@@ -248,16 +249,17 @@ void createPatient(Patient patient, vector<Patient>& patients) {
 }
 
 void registerPatient(vector<Patient>& patients) {
+    clearScreen();
     cout << "\nNew patient registration. (0 at Name to go back)" << endl;
 
+    Patient p = inputPatientDetails(nextPatientId(patients), patients);
+
+    if (trimInput(p.user.name) == "0") {
+        cout << "Registration cancelled." << endl;
+        return;
+    }
+
     while (true) {
-        Patient p = inputPatientDetails(nextPatientId(patients), patients);
-
-        if (trimInput(p.user.name) == "0") {
-            cout << "Registration cancelled." << endl;
-            return;
-        }
-
         cout << "\nYour Profile (Patient ID: " << p.user.id << ")" << endl;
         cout << "Name: "      << p.user.name    << endl;
         cout << "Age: "       << p.user.age     << endl;
@@ -281,11 +283,15 @@ void registerPatient(vector<Patient>& patients) {
             cout << "\nRegistration discarded. Nothing was saved." << endl;
             return;
         }
-        cout << "\nRe-enter your details." << endl;
+
+        cout << "\nModify your pending profile." << endl;
+        modifyPatient(patients, p);
     }
 }
 
 void loginPatient(vector<Patient>& patients) {
+    clearScreen();
+
     string id, password;
 
     cout << "Please login. (0 to go back)" << endl;
@@ -417,6 +423,7 @@ void viewPatientProfile(vector<Patient>& patients, string currentUserID) {
     Patient* target = findPatientByID(patients, currentUserID);
     if (target == nullptr) return;
 
+    clearScreen();
     cout << "\nYour Profile:" << endl;
     cout << "Patient ID: " << target->user.id << endl;
     cout << "Name: " << target->user.name << endl;
@@ -438,6 +445,7 @@ void viewPatientProfile(vector<Patient>& patients, string currentUserID) {
 }
 
 void modifyPatient(vector<Patient>& patients, Patient& patient) {
+    clearScreen();
     int index = 0;
     string password, input;
 
@@ -462,7 +470,6 @@ void modifyPatient(vector<Patient>& patients, Patient& patient) {
                     getline(cin, password);
                 } while (password != patient.user.password);
                 patient.user.name = input;
-                savePatients(patients);
                 cout << "Saved." << endl;
                 break;
 
@@ -480,7 +487,6 @@ void modifyPatient(vector<Patient>& patients, Patient& patient) {
                     getline(cin, password);
                 } while (password != patient.user.password);
                 patient.user.age = stoi(input);
-                savePatients(patients);
                 cout << "Saved." << endl;
                 break;
 
@@ -503,7 +509,6 @@ void modifyPatient(vector<Patient>& patients, Patient& patient) {
                     cout << "Enter password: ";
                     getline(cin, password);
                 } while (password != patient.user.password);
-                savePatients(patients);
                 cout << "Saved." << endl;
                 break;
 
@@ -519,11 +524,11 @@ void modifyPatient(vector<Patient>& patients, Patient& patient) {
                     getline(cin, password);
                 } while (password != patient.user.password);
                 patient.user.phoneNo = input;
-                savePatients(patients);
                 cout << "Saved." << endl;
                 break;
 
             case 0:
+                savePatients(patients);
                 break;
 
             default:
