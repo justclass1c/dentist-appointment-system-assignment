@@ -44,7 +44,7 @@ static string askNonBlank(const string& label) {
     }
 }
 
-void loadDentists(vector<Dentist>& dentists) {
+void loadDentists() {
     ifstream file("data/dentists.txt");
     if (!file.is_open()) return;
     string line;
@@ -83,9 +83,9 @@ Dentist* findDentistById(const string& id) {
     return nullptr;
 }
 
-Dentist* findDentistByEmail(const string email) {
-    for (auto& d : dentists) {       
-        if (d.user.name == name) return &d;
+Dentist* findDentistByEmail(const string& email) {
+    for (auto& d : dentists) {
+        if (d.user.email == email) return &d;
     }
     return nullptr;
 }
@@ -115,20 +115,23 @@ void adminRegisterDentist() {
 
     cout << "Generated Dentist ID: " << d.id << endl;
 
-    string nameNote;
     while (true) {
         d.user.name = askNonBlank("Enter name: ");
         if (!cin) break;
-        if (!validateName(d.user.name)) {
-            cout << "  [!] A name may only contain letters, spaces, hyphens and apostrophes.\n";
-            continue;
-        }
-        if (findDentistByName(d.user.name) == NULL) break;
-        cout << "  [!] A dentist named \"" << d.user.name
-            << "\" already exists. Dentists log in by name, so it must be unique.\n";
+        if (validateName(d.user.name)) break;
+        cout << "  [!] A name may only contain letters, spaces, hyphens and apostrophes.\n";
     }
-    d.user.age      = readMenuChoice("Enter age (18-120): ", 18, 120);
-    d.user.email    = askNonBlank("Enter email (e.g. name@example.com): ");
+    d.user.age = readMenuChoice("Enter age (18-120): ", 18, 120);
+
+    while (true) {
+        string typed = askNonBlank("Enter email (e.g. name@example.com): ");
+        if (!cin) { d.user.email = typed; break; }
+
+        d.user.email = typed;
+        if (validateEmail(d, dentists)) break;
+        d.user.email.clear();
+        cout << "  [!] Use name@example.com, and not an email already registered.\n";
+    }
     d.user.password = askNonBlank("Enter password: ");
 
     dentists.push_back(d);
@@ -148,9 +151,7 @@ void adminModifyDentist() {
     cout << "\n  Registered dentists\n";
     cout << "  " << string(38, '-') << "\n";
     for (size_t i = 0; i < dentists.size(); i++) {
-        cout << "  " << left << setw(8) << dentists[i].id
-             << (dentists[i].user.name.empty() ? "(no name on record)" : dentists[i].user.name)
-             << "\n";
+        cout << "  " << left << setw(8) << dentists[i].id << (dentists[i].user.name.empty() ? "(no name on record)" : dentists[i].user.name) << "\n";
     }
     cout << "  " << string(38, '-') << "\n";
 
@@ -256,8 +257,7 @@ void adminPanel() {
 
 void receptionViewAllDentists() {
     if (dentists.empty()) {
-        cout << "\nNo dentists are registered yet.\n"
-            << "An admin can add one from the main menu: Login Admin > Register dentist.\n";
+        cout << "\nNo dentists are registered yet.\n" << "An admin can add one from the main menu: Login Admin > Register dentist.\n";
         return;
     }
 
@@ -266,9 +266,7 @@ void receptionViewAllDentists() {
     cout << "  " << string(64, '-') << "\n";
     for (size_t i = 0; i < dentists.size(); i++) {
         const Dentist& d = dentists[i];
-        cout << "  " << left << setw(8) << d.id
-            << setw(24) << (d.user.name.empty() ? "(no name on record)" : d.user.name)
-            << setw(28) << d.user.email << d.user.age << "\n";
+        cout << "  " << left << setw(8) << d.id << setw(24) << (d.user.name.empty() ? "(no name on record)" : d.user.name) << setw(28) << d.user.email << d.user.age << "\n";
     }
     cout << "  " << string(64, '-') << "\n";
     cout << "  " << dentists.size() << " dentist(s).\n";
@@ -328,11 +326,10 @@ void dentistMenu(Dentist* d) {
 }
 
 void loginDentist() {
-    string name, pass, note;
+    string email, pass, note;
 
     if (dentists.empty()) {
-        cout << "No dentists are registered yet.\n"
-            << "An admin can add one from the main menu: Login Admin > Register dentist.\n";
+        cout << "No dentists are registered yet.\n" << "An admin can add one from the main menu: Login Admin > Register dentist.\n";
         return;
     }
 
@@ -340,16 +337,16 @@ void loginDentist() {
 
     Dentist* d = nullptr;
     while (true) {
-        name = trim(askInPlace("Dentist name: ", note));
-        if (!cin || name == "0") { clearLine(); cout << "Login cancelled.\n"; return; }
+        email = trim(askInPlace("Dentist email: ", note));
+        if (!cin || email == "0") { clearLine(); cout << "Login cancelled.\n"; return; }
 
-        if (name.empty()) { note = "[cannot be blank] "; continue; }
+        if (email.empty()) { note = "[cannot be blank] "; continue; }
 
-        d = findDentistByName(name);
+        d = findDentistByEmail(email);
         if (d != nullptr) break;
-        note = "[no dentist with that name] ";
+        note = "[no dentist with that email] ";
     }
-    acceptInPlace("Dentist name: ", name);
+    acceptInPlace("Dentist email: ", email);
 
     note.clear();
     while (true) {
