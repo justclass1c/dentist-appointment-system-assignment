@@ -9,9 +9,15 @@
 using namespace std;
 
 const bool KEEP_CURSOR_IN_PLACE = true;
+const string underline = "\033[4m";
+const string reset = "\033[0m";
 
 inline void clearLine() {
     if (KEEP_CURSOR_IN_PLACE) cout << "\r\033[K" << flush;
+}
+
+inline void clearScreen() {
+    cout << "\033[2J\033[H" << flush;
 }
 
 inline void stayOnPromptLine() {
