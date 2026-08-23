@@ -45,6 +45,7 @@ static void printPatientMenu(const Session& current) {
     cout << "4. Cancel an appointment" << endl;
     cout << "5. Find the next available slot" << endl;
     cout << "6. View profile" << endl;
+    cout << "7. Make a payment" << endl;
     cout << "0. Logout" << endl;
 }
 
@@ -68,7 +69,7 @@ void mainMenu(vector<Patient> patients, const Session& current) {
 
         int input = -1;
         stringstream ss(line);
-        if (!(ss >> input) || input < 0 || input > 6) {
+        if (!(ss >> input) || input < 0 || input > 7) {
             note = "[invalid input, try again] ";
             continue;
         }
@@ -92,6 +93,7 @@ void mainMenu(vector<Patient> patients, const Session& current) {
                 viewPatientProfile(patients, currentUserID);
                 pauseForKey();
                 break;
+            case 7: payForAppointment(current);   break;
         }
         showMenu = true;
     }

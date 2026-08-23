@@ -40,4 +40,9 @@ bool hasActiveAppointment(string patientID);
 int countAppointmentsForDentist(string dentistID);
 bool getAppointmentInfo(string apptID, string& patientIDOut, string& dateOut);
 
+// added: Payment navigation entry points, reusing the existing appointment
+// table/selection UI so neither flow needs its own copy of it
+void payForAppointment(const Session& current);          // Patient -> View Appointments -> select completed -> Payment
+void assignPaymentForAppointment(const Session& current); // Reception/Admin -> View Appointments -> select completed -> Assign Payment
+
 #endif
