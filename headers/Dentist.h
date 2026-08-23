@@ -29,6 +29,7 @@ void loadDentists();
 void saveDentists();
 
 Dentist* findDentistById(const string& id);
+Dentist* findDentistByEmail(const string email);
 Dentist* findDentistByName(const string& name);
 
 void displayDentistInfo(const Dentist& d);

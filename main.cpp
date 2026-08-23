@@ -44,6 +44,8 @@ int main() {
         getline(cin, line);
         stayOnPromptLine();
 
+        if (!cin) { cout << "\nGoodbye." << endl; return 0; }
+
         int choiceForMainPage = 0;
         stringstream ss(line);
 

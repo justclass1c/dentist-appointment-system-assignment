@@ -136,6 +136,7 @@ void adminRegisterDentist() {
         cout << "  [!] A dentist named \"" << d.user.name
             << "\" already exists. Dentists log in by name, so it must be unique.\n";
     }
+    if (!cin) return;
     d.user.age      = readMenuChoice("Enter age (18-120): ", 18, 120);
     d.user.email    = askNonBlank("Enter email (e.g. name@example.com): ");
     d.user.password = askNonBlank("Enter password: ");

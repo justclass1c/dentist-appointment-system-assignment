@@ -100,7 +100,9 @@ static bool   patientExists(string patientID);
 static void   raiseInvoice(string apptID, string patientID);
 
 static string lookupPatientName(string patientID) {
-    return "[" + patientID + "]";
+    Patient* p = findPatientByID(patients, patientID);
+    if (p == nullptr || p->user.name.empty()) return "[" + patientID + "]";
+    return p->user.name;
 }
 
 static string lookupDentistName(string dentistID) {

@@ -439,11 +439,9 @@ void viewPatientProfile(vector<Patient>& patients, string currentUserID) {
 
     cout << "\nOptions: M = Modify, Q = Quit" << endl;
 
-    char input;
-    cin >> input;
-    cin.ignore();
+    string input = askInPlace("Choice: ", "");
 
-    if (toupper(input) == 'M') modifyPatient(patients, *target);
+    if (!input.empty() && toupper(input[0]) == 'M') modifyPatient(patients, *target);
 }
 
 void modifyPatient(vector<Patient>& patients, Patient& patient) {
@@ -460,8 +458,7 @@ void modifyPatient(vector<Patient>& patients, Patient& patient) {
         cout << "4. Contact: " << patient.user.phoneNo << endl;
         cout << "0. Done" << endl;
 
-        cin >> index;
-        cin.ignore();
+        index = readMenuChoice("Choice: ", 0, 4);
 
         switch (index) {
             case 1:
@@ -476,13 +473,9 @@ void modifyPatient(vector<Patient>& patients, Patient& patient) {
                 break;
 
             case 2:
-                cout << "Change your age: ";
-                cin >> input;
-                cin.ignore();
+                input = askInPlace("Change your age: ", "");
                 while (!validatePatientAge(stoi(input))) {
-                    cout << "Invalid age (18-120). Try again: ";
-                    cin >> input;
-                    cin.ignore();
+                    input = askInPlace("Invalid age (18-120). Try again: ", "");
                 }
                 do {
                     cout << "Enter password: ";
