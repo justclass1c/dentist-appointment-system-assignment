@@ -1,6 +1,7 @@
 #include "../headers/Appointment.h"
 #include "../headers/Console.h"
 #include "../headers/Dentist.h"
+#include "../headers/Payment.h"
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -120,6 +121,43 @@ static bool patientExists(string patientID) {
 
 static void raiseInvoice(string apptID, string patientID) {
     cout << "  -> Invoice request sent to Billing for " << apptID << " (patient " << patientID << ").\n";
+}
+
+// Patient flow: View Appointments -> select a completed appointment -> pay for it
+void payForAppointment(const Session& current) {
+    int index = selectAppointment(current, COMPLETED, false, "Pay for an Appointment");
+    if (index < 0) return;
+
+    const Appointment& target = appointments[index];
+
+    if (hasPaymentForAppointment(target.appointmentID)) {
+        cout << "\n  This appointment has already been paid for.\n";
+        pauseForKey();
+        return;
+    }
+
+    displayAppointmentDetails(target);
+    processPaymentTransaction(target.appointmentID, target.patientID);
+    pauseForKey();
+}
+
+// Reception/admin flow: View Appointments -> select a completed appointment -> assign the total payment/invoice
+void assignPaymentForAppointment(const Session& current) {
+    int index = selectAppointment(current, COMPLETED, false, "Assign Payment / Send Invoice");
+    if (index < 0) return;
+
+    const Appointment& target = appointments[index];
+
+    if (hasPaymentForAppointment(target.appointmentID)) {
+        cout << "\n  An invoice/payment already exists for this appointment.\n";
+        pauseForKey();
+        return;
+    }
+
+    displayAppointmentDetails(target);
+    cout << "\n  Billing patient " << target.patientID << " " << lookupPatientName(target.patientID) << "\n";
+    processPaymentTransaction(target.appointmentID, target.patientID);
+    pauseForKey();
 }
 
 static string trimField(const string& text) {
@@ -1179,9 +1217,10 @@ static void appointmentMenuReception(const Session& current) {
         cout << "  5. Assign a dentist\n";
         cout << "  6. Two-week schedule grid\n";
         cout << "  7. Find the next available slot\n";
+        cout << "  8. Assign payment / send invoice\n";
         cout << "  0. Back\n";
 
-        choice = readInt("\n  Choice: ", 0, 7);
+        choice = readInt("\n  Choice: ", 0, 8);
 
         switch (choice) {
             case 1: scheduleAppointment(current); break;
@@ -1191,6 +1230,7 @@ static void appointmentMenuReception(const Session& current) {
             case 5: assignDentist(current);       break;
             case 6: displayScheduleGrid();        break;
             case 7: findNextAvailable();          break;
+            case 8: assignPaymentForAppointment(current); break;
             case 0: break;
         }
     } while (choice != 0);

@@ -3,9 +3,11 @@
 #include "./src/patient.cpp"
 #include "./src/dentist.cpp"
 #include "./src/appointment.cpp"
+#include "./src/payment.cpp"
 #include "./headers/Patient.h"
 #include "./headers/Dentist.h"
 #include "./headers/Appointment.h"
+#include "./headers/Payment.h"
 #include "./headers/Console.h"
 #include <vector>
 
@@ -31,6 +33,7 @@ void printWelcomeMenu() {
 int main() {
     loadDentists();
     loadAppointments();
+    loadPaymentRecords();
 
     printWelcomeMenu();
 
