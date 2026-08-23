@@ -3,9 +3,11 @@
 #include "./src/patient.cpp"
 #include "./src/dentist.cpp"
 #include "./src/appointment.cpp"
+#include "./src/payment.cpp"
 #include "./headers/Patient.h"
 #include "./headers/Dentist.h"
 #include "./headers/Appointment.h"
+#include "./headers/Payment.h"
 #include "./headers/Console.h"
 #include <vector>
 
@@ -14,21 +16,24 @@ using namespace std;
 vector<Patient> patients = loadPatients();
 
 void printWelcomeMenu() {
-    cout << "Welcome to Dentist Sdn. Bhd." << endl;
+    clearScreen();
+    cout << underline << "Welcome to Dentist Sdn. Bhd." << reset << endl;
     cout << "Please choose any of the options below:" << endl;
     cout << "1. Login Patient" << endl;
     cout << "2. Login Dentist" << endl;
     cout << "3. Login Reception" << endl;
     cout << "4. Register as Patient" << endl;
     cout << "5. Login Admin" << endl;
-
+    cout << endl;
     cout << "0. Exit" << endl;
+    cout << endl;
 
 }
 
 int main() {
     loadDentists();
     loadAppointments();
+    loadPaymentRecords();
 
     printWelcomeMenu();
 

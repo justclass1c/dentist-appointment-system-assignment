@@ -15,9 +15,15 @@ struct Patient {
 };
 
 vector<Patient> loadPatients();
+Patient inputPatientDetails(string id, vector<Patient>& patients);
 void registerPatient(vector<Patient>& patients);
+void createPatient(Patient patient, vector<Patient>& patients);
+void viewPatients(vector<Patient>& patients);
 void loginPatient(vector<Patient>& patients);
+void modifyPatient(vector<Patient>& patients, Patient& patient);
 void savePatients(vector<Patient> patients);
-void viewPatientProfile(vector<Patient> patients, string currentUserID);
+void viewPatientProfile(vector<Patient>& patients, string currentUserID);
 Patient* findPatientByID(vector<Patient>& patients, const string& id); // added: lookup used by Payment module
+
+extern vector<Patient> patients; // defined in main.cpp; lets Payment look up a patient without it being passed around
 #endif
