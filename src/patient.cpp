@@ -1,5 +1,6 @@
 #include "../headers/Patient.h"
 #include "../headers/Appointment.h"
+#include "../headers/Payment.h"
 #include "../headers/Console.h"
 #include "../headers/Validation.h"
 #include "../src/validation.cpp"
@@ -46,7 +47,7 @@ static void printPatientMenu(const Session& current) {
     cout << "4. Cancel an appointment" << endl;
     cout << "5. Find the next available slot" << endl;
     cout << "6. View profile" << endl;
-    cout << "7. Make a payment" << endl;
+    cout << "7. Pay an invoice" << endl;
     cout << "0. Logout" << endl;
 }
 

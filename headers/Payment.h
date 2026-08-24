@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include "Patient.h" // needed to look up a patient's age/insurance for discounts
+#include "Session.h"
 
 using namespace std;
 
@@ -21,28 +22,37 @@ struct ServiceItem {
     double price;
 };
 
-// Represents one finalized payment transaction/record
+// Represents one billing record, from invoice through to payment.
+// Reception creates it as PENDING (picks the treatment, sets the amount);
+// only the patient can change it to PAID (picks how they're paying).
 struct Payment {
     string paymentID;
     string patientID;      // Reference only - no duplication of patient data
     string appointmentID;  // Reference only - no duplication of appointment data
-    double totalAmount;
-    string method;         // "Cash", "Card", or "Insurance"
-    string date;
+    string itemsSummary;   // treatment rendered, as fixed by reception at invoice time
+    double totalAmount;    // fixed by reception at invoice time - the patient cannot change this
+    string method;         // "" until paid, then "Cash" / "Card" / "Insurance"
+    string invoiceDate;    // date reception issued the invoice
+    string paymentDate;    // date the patient paid; "" until paid
+    string status;         // "PENDING" or "PAID"
 };
 
 // File Processing
 void loadPaymentRecords();
 
-// Lookup - lets the Appointment module check before offering to bill twice
-bool hasPaymentForAppointment(const string& appointmentID);
+// Reception only: creates the invoice for a completed appointment.
+// Reception selects the treatment actually rendered and the total is
+// computed and fixed here (with discount auto-applied) - the patient never
+// gets to choose or change what they're billed for.
+void issueInvoice(const string& appointmentID, const string& patientID);
 
-// Single entry point used by both flows:
-//   Patient   -> View Appointments -> select completed appointment -> Payment
-//   Reception -> View Appointments -> select completed appointment -> Assign Payment
-// The appointment-selection UI lives in appointment.cpp; this function does
-// the actual billing (services, discount, method, receipt, save).
-void processPaymentTransaction(const string& appointmentID, const string& patientID);
+// Blocks reception from invoicing the same appointment twice.
+bool hasInvoiceForAppointment(const string& appointmentID);
+
+// Patient only: pays off one of their own PENDING invoices. The patient
+// only ever picks a payment method - the amount and treatment were already
+// fixed by reception and cannot be changed here.
+void payForAppointment(const Session& current);
 
 // Output
 void displayAllPayments();

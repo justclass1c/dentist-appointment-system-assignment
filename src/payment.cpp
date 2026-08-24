@@ -7,6 +7,7 @@
 #include <filesystem>
 #include <ctime>
 #include <cstdlib>
+#include <cstring>
 
 using namespace std;
 
@@ -35,6 +36,8 @@ static string todayString() {
 // ---------------------------------------------------------
 // File Processing
 // ---------------------------------------------------------
+// Record format: paymentID,patientID,appointmentID,itemsSummary,totalAmount,method,invoiceDate,paymentDate,status
+// itemsSummary uses "; " internally (never a bare comma) so it can't be confused with the field separator.
 void loadPaymentRecords() {
     paymentHistory.clear();
 
@@ -52,34 +55,44 @@ void loadPaymentRecords() {
         getline(ss, p.paymentID, ',');
         getline(ss, p.patientID, ',');
         getline(ss, p.appointmentID, ',');
+        getline(ss, p.itemsSummary, ',');
         getline(ss, field, ',');
         p.totalAmount = field.empty() ? 0.0 : stod(field);
         getline(ss, p.method, ',');
-        getline(ss, p.date, ',');
+        getline(ss, p.invoiceDate, ',');
+        getline(ss, p.paymentDate, ',');
+        getline(ss, p.status, ',');
 
-        if (p.paymentID.empty()) continue;
+        // Input validation: skip malformed/incomplete lines (e.g. from an
+        // older file format) instead of crashing on a bad record
+        if (p.paymentID.empty() || p.status.empty()) continue;
+
         paymentHistory.push_back(p);
     }
     inFile.close();
 }
 
-static void savePaymentRecord(const Payment& p) {
+static void saveAllPaymentRecords() {
     filesystem::create_directories("data");
-    ofstream outFile("data/payments.txt", ios::app);
+    ofstream outFile("data/payments.txt"); // rewrite in full - records can change status after creation
     if (!outFile) {
         cout << "  [!] Could not write to data/payments.txt\n";
         return;
     }
-    outFile << p.paymentID << "," << p.patientID << "," << p.appointmentID << ","
-            << fixed << setprecision(2) << p.totalAmount << "," << p.method << ","
-            << p.date << "\n";
+    for (size_t i = 0; i < paymentHistory.size(); i++) {
+        const Payment& p = paymentHistory[i];
+        outFile << p.paymentID << "," << p.patientID << "," << p.appointmentID << ","
+                << p.itemsSummary << "," << fixed << setprecision(2) << p.totalAmount << ","
+                << p.method << "," << p.invoiceDate << "," << p.paymentDate << ","
+                << p.status << "\n";
+    }
     outFile.close();
 }
 
 // ---------------------------------------------------------
 // Lookup
 // ---------------------------------------------------------
-bool hasPaymentForAppointment(const string& appointmentID) {
+bool hasInvoiceForAppointment(const string& appointmentID) {
     for (size_t i = 0; i < paymentHistory.size(); i++) {
         if (paymentHistory[i].appointmentID == appointmentID) return true;
     }
@@ -113,34 +126,94 @@ static string generatePaymentID() {
     return id;
 }
 
+static void printItemsSummary(const string& itemsSummary) {
+    size_t start = 0;
+    while (start < itemsSummary.size()) {
+        size_t pos = itemsSummary.find("; ", start);
+        string item = (pos == string::npos) ? itemsSummary.substr(start) : itemsSummary.substr(start, pos - start);
+        cout << "  - " << item << "\n";
+        if (pos == string::npos) break;
+        start = pos + 2;
+    }
+}
+
 // ---------------------------------------------------------
-// Service Selection & Calculation
+// Service Selection & Calculation (reception only, at invoice time)
 // ---------------------------------------------------------
-static vector<ServiceItem> selectServices() {
+static void printSelectedServices(const vector<ServiceItem>& selected) {
+    if (selected.empty()) {
+        cout << "  (no services added yet)\n";
+        return;
+    }
+    double runningTotal = 0.0;
+    for (size_t i = 0; i < selected.size(); i++) {
+        cout << "  " << (i + 1) << ". " << left << setw(22) << selected[i].serviceName
+             << "RM " << fixed << setprecision(2) << selected[i].price << "\n";
+        runningTotal += selected[i].price;
+    }
+    cout << "  Subtotal so far: RM " << fixed << setprecision(2) << runningTotal << " (before GST/discount)\n";
+}
+
+static vector<ServiceItem> selectServicesForInvoice() {
     vector<ServiceItem> selected;
 
-    cout << "\n  Services rendered\n";
-    cout << "  " << string(40, '-') << "\n";
-    for (int i = 0; i < (int)availableServices.size(); i++) {
-        cout << "  " << (i + 1) << ". " << left << setw(22) << availableServices[i].serviceName
-             << "RM " << fixed << setprecision(2) << availableServices[i].price << "\n";
-    }
-    cout << "  " << string(40, '-') << "\n";
-
     while (true) {
-        int choice = readMenuChoice("  Add a service (0 to finish): ", 0, (int)availableServices.size());
-        if (choice == 0) break;
-        selected.push_back(availableServices[choice - 1]);
-        cout << "  Added: " << availableServices[choice - 1].serviceName << "\n";
+        cout << "\n  Services rendered\n";
+        cout << "  " << string(40, '-') << "\n";
+        for (int i = 0; i < (int)availableServices.size(); i++) {
+            cout << "  " << (i + 1) << ". " << left << setw(22) << availableServices[i].serviceName
+                 << "RM " << fixed << setprecision(2) << availableServices[i].price << "\n";
+        }
+        cout << "  " << string(40, '-') << "\n";
+
+        cout << "\n  Currently added to this invoice:\n";
+        printSelectedServices(selected);
+
+        cout << "\n  A) Add a service\n";
+        cout << "  R) Remove a service\n";
+        cout << "  F) Finish (0 added = cancel)\n";
+
+        char action = 'A';
+        string note;
+        while (true) {
+            string line = askInPlace("  Choice (A/R/F): ", note);
+            if (!cin) return selected;
+
+            if (line.length() == 1 && strchr("ARFarf", line[0]) != nullptr) {
+                action = toupper(line[0]);
+                acceptInPlace("  Choice (A/R/F): ", string(1, action));
+                break;
+            }
+            note = "[enter A, R or F] ";
+        }
+
+        if (action == 'F') {
+            break;
+        }
+
+        if (action == 'A') {
+            int choice = readMenuChoice("  Add which service (0 to go back): ",
+                                         0, (int)availableServices.size());
+            if (choice == 0) continue;
+            selected.push_back(availableServices[choice - 1]);
+            cout << "  Added: " << availableServices[choice - 1].serviceName << "\n";
+            continue;
+        }
+
+        // action == 'R'
+        if (selected.empty()) {
+            cout << "  [!] Nothing to remove yet.\n";
+            continue;
+        }
+        cout << "\n  Currently added:\n";
+        printSelectedServices(selected);
+        int removeChoice = readMenuChoice("  Remove which line (0 to go back): ", 0, (int)selected.size());
+        if (removeChoice == 0) continue;
+        cout << "  Removed: " << selected[removeChoice - 1].serviceName << "\n";
+        selected.erase(selected.begin() + (removeChoice - 1));
     }
 
-    // Input validation: an invoice needs at least one billable item
-    if (selected.empty()) {
-        cout << "  [!] No services selected - defaulting to a Dental Check-up.\n";
-        selected.push_back(availableServices[0]);
-    }
-
-    return selected;
+    return selected; // empty means "cancel" - the caller decides what that means
 }
 
 // Pass-by-value: original service list is only read, not modified
@@ -169,109 +242,14 @@ static void applyDiscount(Payment& p, bool isSenior, bool hasInsurance) {
     }
 }
 
-static char askPaymentMethod() {
-    const string label = "  Payment method - 1) Cash  2) Card  3) Insurance: ";
-    string note;
-    while (true) {
-        string line = askInPlace(label, note);
-        if (!cin) return '1';
-
-        if (line.length() == 1 && (line[0] == '1' || line[0] == '2' || line[0] == '3')) {
-            acceptInPlace(label, line);
-            return line[0];
-        }
-        note = "[enter 1, 2 or 3] ";
-    }
-}
-
 // ---------------------------------------------------------
-// Output
+// Reception: issue the invoice
 // ---------------------------------------------------------
-static void generateReceipt(const Payment& p, const vector<ServiceItem>& services) {
-    cout << "\n  ========== RECEIPT ==========\n";
-    cout << "  Payment ID: " << p.paymentID << "\n";
-    cout << "  Patient ID: " << p.patientID << "\n";
-    cout << "  Appointment ID: " << p.appointmentID << "\n";
-    cout << "  Date: " << p.date << "\n";
-    cout << "  ------------------------------\n";
-
-    // 2D-style itemized breakdown (service name + price)
-    for (int i = 0; i < (int)services.size(); i++) {
-        cout << "  " << left << setw(22) << services[i].serviceName
-             << "RM " << right << setw(8) << fixed << setprecision(2)
-             << services[i].price << "\n";
-    }
-
-    cout << "  ------------------------------\n";
-    cout << "  Payment Method: " << p.method << "\n";
-    cout << "  TOTAL PAID: RM " << fixed << setprecision(2) << p.totalAmount << "\n";
-    cout << "  ==============================\n";
-}
-
-void displayAllPayments() {
-    if (paymentHistory.empty()) {
-        cout << "\n  No payment records found.\n";
-        return;
-    }
-
-    cout << "\n  " << left << setw(10) << "ID" << setw(12) << "PatientID"
-         << setw(15) << "AppointmentID" << setw(10) << "Method"
-         << setw(12) << "Date" << "Amount (RM)\n";
-    cout << "  " << string(70, '-') << "\n";
-
-    for (int i = 0; i < (int)paymentHistory.size(); i++) {
-        const Payment& p = paymentHistory[i];
-        cout << "  " << left << setw(10) << p.paymentID << setw(12) << p.patientID
-             << setw(15) << p.appointmentID << setw(10) << p.method
-             << setw(12) << p.date << fixed << setprecision(2) << p.totalAmount << "\n";
-    }
-}
-
-void generateSummaryReport() {
-    double totalRevenue = 0.0;
-    int cashCount = 0, cardCount = 0, insuranceCount = 0;
-
-    for (int i = 0; i < (int)paymentHistory.size(); i++) {
-        totalRevenue += paymentHistory[i].totalAmount;
-
-        if (paymentHistory[i].method == "Cash") cashCount++;
-        else if (paymentHistory[i].method == "Card") cardCount++;
-        else if (paymentHistory[i].method == "Insurance") insuranceCount++;
-    }
-
-    cout << "\n  ===== PAYMENT SUMMARY REPORT =====\n";
-    cout << "  Total Transactions: " << paymentHistory.size() << "\n";
-    cout << "  Total Revenue: RM " << fixed << setprecision(2) << totalRevenue << "\n";
-    cout << "  -----------------------------------\n";
-    cout << "  Cash Payments:      " << cashCount << "\n";
-    cout << "  Card Payments:      " << cardCount << "\n";
-    cout << "  Insurance Payments: " << insuranceCount << "\n";
-
-    if (!paymentHistory.empty()) {
-        double average = totalRevenue / paymentHistory.size();
-        cout << "  Average Transaction: RM " << fixed << setprecision(2) << average << "\n";
-    }
-    cout << "  ===================================\n";
-}
-
-// ---------------------------------------------------------
-// Transaction entry point - called from appointment.cpp after a completed
-// appointment has been selected, by either the patient (paying for
-// themselves) or reception/admin (billing a patient on their behalf)
-// ---------------------------------------------------------
-void processPaymentTransaction(const string& appointmentID, const string& patientID) {
-    Payment newPayment;
-    newPayment.paymentID = generatePaymentID();
-    newPayment.patientID = patientID;
-    newPayment.appointmentID = appointmentID;
-    newPayment.date = todayString();
-
-    // Look up the patient's real record so discounts are automatic
+void issueInvoice(const string& appointmentID, const string& patientID) {
     Patient* patient = findPatientByID(patients, patientID);
 
     bool isSenior = false;
     bool hasInsurance = false;
-
     if (patient == nullptr) {
         // Input validation: patientID doesn't match any registered patient
         cout << "  [!] Patient record not found - proceeding without discount eligibility.\n";
@@ -280,25 +258,192 @@ void processPaymentTransaction(const string& appointmentID, const string& patien
         hasInsurance = patient->hasInsurance;
     }
 
-    vector<ServiceItem> services = selectServices();
-    newPayment.totalAmount = calculateTotal(services); // automatically calculated, no manual entry
-
-    applyDiscount(newPayment, isSenior, hasInsurance); // automatically applied, no manual entry
-
-    char methodChoice = askPaymentMethod();
-    switch (methodChoice) {
-        case '1': newPayment.method = "Cash"; break;
-        case '2': newPayment.method = "Card"; break;
-        case '3': newPayment.method = "Insurance"; break;
-        default:  newPayment.method = "Cash"; break;
+    vector<ServiceItem> services = selectServicesForInvoice();
+    if (services.empty()) {
+        cout << "\n  No services selected - invoice cancelled.\n";
+        return;
     }
 
-    paymentHistory.push_back(newPayment);
-    savePaymentRecord(newPayment);
-    generateReceipt(newPayment, services);
+    Payment invoice;
+    invoice.paymentID = generatePaymentID();
+    invoice.patientID = patientID;
+    invoice.appointmentID = appointmentID;
+    invoice.totalAmount = calculateTotal(services); // automatically calculated, no manual entry
+    applyDiscount(invoice, isSenior, hasInsurance);  // automatically applied, no manual entry
+    invoice.method = "";       // not chosen yet - that's the patient's step
+    invoice.invoiceDate = todayString();
+    invoice.paymentDate = "";  // not paid yet
+    invoice.status = "PENDING";
 
+    string itemsSummary;
+    for (size_t i = 0; i < services.size(); i++) {
+        if (i > 0) itemsSummary += "; ";
+        stringstream item;
+        item << services[i].serviceName << " (RM" << fixed << setprecision(2) << services[i].price << ")";
+        itemsSummary += item.str();
+    }
+    invoice.itemsSummary = itemsSummary;
+
+    paymentHistory.push_back(invoice);
+    saveAllPaymentRecords();
+
+    cout << "\n  ========== INVOICE ISSUED ==========\n";
+    cout << "  Invoice ID: " << invoice.paymentID << "\n";
+    cout << "  Patient ID: " << invoice.patientID << "\n";
+    cout << "  Appointment ID: " << invoice.appointmentID << "\n";
+    cout << "  ------------------------------------\n";
+    printItemsSummary(invoice.itemsSummary);
+    cout << "  ------------------------------------\n";
     if (patient != nullptr) {
         cout << "  Discounts applied - Senior: " << (isSenior ? "Yes" : "No")
              << ", Insurance: " << (hasInsurance ? "Yes" : "No") << "\n";
     }
+    cout << "  AMOUNT DUE: RM " << fixed << setprecision(2) << invoice.totalAmount << "\n";
+    cout << "  Status: PENDING - the patient can now pay this amount from their own login.\n";
+    cout << "  =====================================\n";
+}
+
+// ---------------------------------------------------------
+// Patient: pay off a pending invoice
+// ---------------------------------------------------------
+static char askPaymentMethod() {
+    const string label = "  Confirm payment - 1) Cash  2) Card  3) Insurance  (0 to cancel): ";
+    string note;
+    while (true) {
+        string line = askInPlace(label, note);
+        if (!cin) return '0';
+
+        if (line.length() == 1 && (line[0] == '0' || line[0] == '1' || line[0] == '2' || line[0] == '3')) {
+            acceptInPlace(label, line);
+            return line[0];
+        }
+        note = "[enter 0, 1, 2 or 3] ";
+    }
+}
+
+static void generateReceipt(const Payment& p) {
+    cout << "\n  ========== RECEIPT ==========\n";
+    cout << "  Payment ID: " << p.paymentID << "\n";
+    cout << "  Patient ID: " << p.patientID << "\n";
+    cout << "  Appointment ID: " << p.appointmentID << "\n";
+    cout << "  ------------------------------\n";
+    printItemsSummary(p.itemsSummary);
+    cout << "  ------------------------------\n";
+    cout << "  Payment Method: " << p.method << "\n";
+    cout << "  Invoiced: " << p.invoiceDate << "   Paid: " << p.paymentDate << "\n";
+    cout << "  TOTAL PAID: RM " << fixed << setprecision(2) << p.totalAmount << "\n";
+    cout << "  ==============================\n";
+}
+
+void payForAppointment(const Session& current) {
+    vector<int> pendingIndices;
+    for (size_t i = 0; i < paymentHistory.size(); i++) {
+        if (paymentHistory[i].patientID == current.userId && paymentHistory[i].status == "PENDING") {
+            pendingIndices.push_back((int)i);
+        }
+    }
+
+    if (pendingIndices.empty()) {
+        cout << "\n  You have no pending invoices to pay right now.\n";
+        cout << "  (Reception issues an invoice once your appointment is marked completed.)\n";
+        pauseForKey();
+        return;
+    }
+
+    cout << "\n  Pending Invoices\n";
+    cout << "  " << left << setw(6) << "No." << setw(16) << "Appointment"
+         << setw(14) << "Invoiced" << "Amount Due (RM)\n";
+    cout << "  " << string(50, '-') << "\n";
+    for (size_t i = 0; i < pendingIndices.size(); i++) {
+        const Payment& inv = paymentHistory[pendingIndices[i]];
+        cout << "  " << left << setw(6) << (i + 1) << setw(16) << inv.appointmentID
+             << setw(14) << inv.invoiceDate << fixed << setprecision(2) << inv.totalAmount << "\n";
+    }
+    cout << "  " << string(50, '-') << "\n";
+
+    int choice = readMenuChoice("\n  Select an invoice to pay by No. (0 to cancel): ",
+                                 0, (int)pendingIndices.size());
+    if (choice == 0) {
+        cout << "  Cancelled.\n";
+        return;
+    }
+
+    Payment& invoice = paymentHistory[pendingIndices[choice - 1]];
+
+    cout << "\n  Invoice " << invoice.paymentID << " for appointment " << invoice.appointmentID << "\n";
+    printItemsSummary(invoice.itemsSummary);
+    cout << "  Amount Due: RM " << fixed << setprecision(2) << invoice.totalAmount << "\n";
+
+    char methodChoice = askPaymentMethod();
+    if (methodChoice == '0') {
+        cout << "  Payment cancelled. Your invoice is still pending.\n";
+        pauseForKey();
+        return;
+    }
+
+    switch (methodChoice) {
+        case '1': invoice.method = "Cash"; break;
+        case '2': invoice.method = "Card"; break;
+        case '3': invoice.method = "Insurance"; break;
+    }
+    invoice.status = "PAID";
+    invoice.paymentDate = todayString();
+
+    saveAllPaymentRecords();
+    generateReceipt(invoice);
+    pauseForKey();
+}
+
+// ---------------------------------------------------------
+// Output
+// ---------------------------------------------------------
+void displayAllPayments() {
+    if (paymentHistory.empty()) {
+        cout << "\n  No payment records found.\n";
+        return;
+    }
+
+    cout << "\n  " << left << setw(10) << "ID" << setw(12) << "PatientID"
+         << setw(15) << "AppointmentID" << setw(9) << "Status" << setw(10) << "Method"
+         << setw(12) << "Invoiced" << "Amount (RM)\n";
+    cout << "  " << string(80, '-') << "\n";
+
+    for (int i = 0; i < (int)paymentHistory.size(); i++) {
+        const Payment& p = paymentHistory[i];
+        cout << "  " << left << setw(10) << p.paymentID << setw(12) << p.patientID
+             << setw(15) << p.appointmentID << setw(9) << p.status
+             << setw(10) << (p.method.empty() ? "-" : p.method)
+             << setw(12) << p.invoiceDate << fixed << setprecision(2) << p.totalAmount << "\n";
+    }
+}
+
+void generateSummaryReport() {
+    double collectedRevenue = 0.0;
+    double pendingRevenue = 0.0;
+    int cashCount = 0, cardCount = 0, insuranceCount = 0, pendingCount = 0;
+
+    for (int i = 0; i < (int)paymentHistory.size(); i++) {
+        const Payment& p = paymentHistory[i];
+
+        if (p.status == "PAID") {
+            collectedRevenue += p.totalAmount;
+            if (p.method == "Cash") cashCount++;
+            else if (p.method == "Card") cardCount++;
+            else if (p.method == "Insurance") insuranceCount++;
+        } else {
+            pendingRevenue += p.totalAmount;
+            pendingCount++;
+        }
+    }
+
+    cout << "\n  ===== PAYMENT SUMMARY REPORT =====\n";
+    cout << "  Total Invoices: " << paymentHistory.size() << "\n";
+    cout << "  Collected Revenue: RM " << fixed << setprecision(2) << collectedRevenue << "\n";
+    cout << "  Pending (Unpaid) : RM " << fixed << setprecision(2) << pendingRevenue
+         << " across " << pendingCount << " invoice(s)\n";
+    cout << "  -----------------------------------\n";
+    cout << "  Cash Payments:      " << cashCount << "\n";
+    cout << "  Card Payments:      " << cardCount << "\n";
+    cout << "  Insurance Payments: " << insuranceCount << "\n";
+    cout << "  ===================================\n";
 }

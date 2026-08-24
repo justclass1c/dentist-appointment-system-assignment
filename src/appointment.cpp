@@ -125,40 +125,24 @@ static void raiseInvoice(string apptID, string patientID) {
     cout << "  -> Invoice request sent to Billing for " << apptID << " (patient " << patientID << ").\n";
 }
 
-// Patient flow: View Appointments -> select a completed appointment -> pay for it
-void payForAppointment(const Session& current) {
-    int index = selectAppointment(current, COMPLETED, false, "Pay for an Appointment");
-    if (index < 0) return;
-
-    const Appointment& target = appointments[index];
-
-    if (hasPaymentForAppointment(target.appointmentID)) {
-        cout << "\n  This appointment has already been paid for.\n";
-        pauseForKey();
-        return;
-    }
-
-    displayAppointmentDetails(target);
-    processPaymentTransaction(target.appointmentID, target.patientID);
-    pauseForKey();
-}
-
-// Reception/admin flow: View Appointments -> select a completed appointment -> assign the total payment/invoice
+// Reception/admin flow: View Appointments -> select a completed appointment -> issue the invoice.
+// This only fixes what the patient owes (treatment + auto-discount) - it does NOT take payment.
+// The patient pays it themselves later, from their own login (see payForAppointment in payment.cpp).
 void assignPaymentForAppointment(const Session& current) {
-    int index = selectAppointment(current, COMPLETED, false, "Assign Payment / Send Invoice");
+    int index = selectAppointment(current, COMPLETED, false, "Issue Invoice for a Completed Appointment");
     if (index < 0) return;
 
     const Appointment& target = appointments[index];
 
-    if (hasPaymentForAppointment(target.appointmentID)) {
-        cout << "\n  An invoice/payment already exists for this appointment.\n";
+    if (hasInvoiceForAppointment(target.appointmentID)) {
+        cout << "\n  An invoice has already been issued for this appointment.\n";
         pauseForKey();
         return;
     }
 
     displayAppointmentDetails(target);
-    cout << "\n  Billing patient " << target.patientID << " " << lookupPatientName(target.patientID) << "\n";
-    processPaymentTransaction(target.appointmentID, target.patientID);
+    cout << "\n  Issuing invoice for patient " << target.patientID << " " << lookupPatientName(target.patientID) << "\n";
+    issueInvoice(target.appointmentID, target.patientID);
     pauseForKey();
 }
 
@@ -1219,7 +1203,7 @@ static void appointmentMenuReception(const Session& current) {
         cout << "  5. Assign a dentist\n";
         cout << "  6. Two-week schedule grid\n";
         cout << "  7. Find the next available slot\n";
-        cout << "  8. Assign payment / send invoice\n";
+        cout << "  8. Issue invoice for a completed appointment\n";
         cout << "  0. Back\n";
 
         choice = readInt("\n  Choice: ", 0, 8);
