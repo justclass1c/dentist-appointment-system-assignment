@@ -1,4 +1,5 @@
 #include "../headers/Payment.h"
+#include "../headers/Loyalty.h"
 #include "../headers/Console.h"
 #include <iostream>
 #include <iomanip>
@@ -14,7 +15,9 @@ using namespace std;
 static vector<Payment> paymentHistory;
 
 // A small fixed service list to bill against (could later be loaded from file)
-static vector<ServiceItem> availableServices = {
+// Not `static` - Loyalty.h declares this `extern` so it can price service-credit prizes
+// from the real catalog instead of duplicating names/prices that could drift out of sync.
+vector<ServiceItem> availableServices = {
     {"Dental Check-up", 50.00},
     {"Tooth Extraction", 120.00},
     {"Scaling & Polishing", 90.00},
@@ -245,7 +248,7 @@ static void applyDiscount(Payment& p, bool isSenior, bool hasInsurance) {
 // ---------------------------------------------------------
 // Reception: issue the invoice
 // ---------------------------------------------------------
-void issueInvoice(const string& appointmentID, const string& patientID) {
+void issueInvoice(const Session& current, const string& appointmentID, const string& patientID) {
     Patient* patient = findPatientByID(patients, patientID);
 
     bool isSenior = false;
@@ -270,6 +273,7 @@ void issueInvoice(const string& appointmentID, const string& patientID) {
     invoice.appointmentID = appointmentID;
     invoice.totalAmount = calculateTotal(services); // automatically calculated, no manual entry
     applyDiscount(invoice, isSenior, hasInsurance);  // automatically applied, no manual entry
+    vector<string> loyaltyLines = applyUnredeemedWin(current, invoice, patientID); // reception picks which reward (if any) to apply, confirmed before it commits
     invoice.method = "";       // not chosen yet - that's the patient's step
     invoice.invoiceDate = todayString();
     invoice.paymentDate = "";  // not paid yet
@@ -297,6 +301,9 @@ void issueInvoice(const string& appointmentID, const string& patientID) {
     if (patient != nullptr) {
         cout << "  Discounts applied - Senior: " << (isSenior ? "Yes" : "No")
              << ", Insurance: " << (hasInsurance ? "Yes" : "No") << "\n";
+    }
+    for (size_t i = 0; i < loyaltyLines.size(); i++) {
+        cout << "  Loyalty reward applied - " << loyaltyLines[i] << "\n";
     }
     cout << "  AMOUNT DUE: RM " << fixed << setprecision(2) << invoice.totalAmount << "\n";
     cout << "  Status: PENDING - the patient can now pay this amount from their own login.\n";
@@ -390,6 +397,7 @@ void payForAppointment(const Session& current) {
     invoice.paymentDate = todayString();
 
     saveAllPaymentRecords();
+    grantLoyaltyEntryForPayment(invoice.paymentID, invoice.patientID); // 1 raffle ticket per paid invoice
     generateReceipt(invoice);
     pauseForKey();
 }
@@ -446,4 +454,22 @@ void generateSummaryReport() {
     cout << "  Card Payments:      " << cardCount << "\n";
     cout << "  Insurance Payments: " << insuranceCount << "\n";
     cout << "  ===================================\n";
+}
+
+void paymentReportsMenu() {
+    int choice;
+    do {
+        cout << "\n--- Payment Reports ---\n";
+        cout << "1. View all payments\n";
+        cout << "2. Revenue summary\n";
+        cout << "0. Back\n";
+
+        choice = readMenuChoice("Choose: ", 0, 2);
+
+        switch (choice) {
+            case 1: displayAllPayments();     pauseForKey(); break;
+            case 2: generateSummaryReport();  pauseForKey(); break;
+            case 0: break;
+        }
+    } while (choice != 0);
 }

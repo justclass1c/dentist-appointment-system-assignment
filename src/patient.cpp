@@ -1,6 +1,7 @@
 #include "../headers/Patient.h"
 #include "../headers/Appointment.h"
 #include "../headers/Payment.h"
+#include "../headers/Loyalty.h"
 #include "../headers/Console.h"
 #include "../headers/Validation.h"
 #include "../src/validation.cpp"
@@ -48,10 +49,13 @@ static void printPatientMenu(const Session& current) {
     cout << "5. Find the next available slot" << endl;
     cout << "6. View profile" << endl;
     cout << "7. Pay an invoice" << endl;
+    cout << "8. My loyalty tickets" << endl;
     cout << "0. Logout" << endl;
 }
 
 void mainMenu(vector<Patient>& patients, const Session& current) {
+    checkAndShowLoyaltyNotifications(current); // shown once per login, before the menu loop starts
+
     string line, note;
     bool showMenu = true;
 
@@ -70,7 +74,7 @@ void mainMenu(vector<Patient>& patients, const Session& current) {
 
         int input = -1;
         stringstream ss(line);
-        if (!(ss >> input) || input < 0 || input > 7) {
+        if (!(ss >> input) || input < 0 || input > 8) {
             note = "[invalid input, try again] ";
             continue;
         }
@@ -94,7 +98,8 @@ void mainMenu(vector<Patient>& patients, const Session& current) {
                 viewPatientProfile(patients, currentUserID);
                 pauseForKey();
                 break;
-            case 7: payForAppointment(current);   break;
+            case 7: payForAppointment(current);      break;
+            case 8: viewMyLoyaltyTickets(current);   break;
         }
         showMenu = true;
     }
@@ -169,6 +174,20 @@ static char askLetter(const string& label, const string& allowed, const string& 
         }
         note = failMsg;
     }
+}
+
+static bool confirmProfilePassword(const string& actualPassword) {
+    string note;
+    const int MAX_TRIES = 3;
+
+    for (int attempt = 1; attempt <= MAX_TRIES; attempt++) {
+        string entered = askInPlace("Enter password: ", note);
+        if (!cin) return false;
+        if (entered == actualPassword) return true;
+        note = "[incorrect] ";
+    }
+    cout << "[!] Too many failed attempts.\n";
+    return false;
 }
 
 Patient inputPatientDetails(string id, vector<Patient>& patients) {
@@ -448,7 +467,7 @@ void viewPatientProfile(vector<Patient>& patients, string currentUserID) {
 void modifyPatient(vector<Patient>& patients, Patient& patient) {
     clearScreen();
     int index = 0;
-    string password, input;
+    string input;
 
     do {
         cout << "\nChoose a field to change." << endl;
@@ -462,66 +481,82 @@ void modifyPatient(vector<Patient>& patients, Patient& patient) {
         index = readMenuChoice("Choice: ", 0, 4);
 
         switch (index) {
-            case 1:
+            case 1: {
                 cout << "Change your name: ";
                 getline(cin, input);
-                do {
-                    cout << "Enter password: ";
-                    getline(cin, password);
-                } while (password != patient.user.password);
-                patient.user.name = input;
-                cout << "Saved." << endl;
-                break;
+                if (!cin) return;
 
-            case 2:
-                input = askInPlace("Change your age: ", "");
-                while (!validatePatientAge(stoi(input))) {
-                    input = askInPlace("Invalid age (18-120). Try again: ", "");
+                if (confirmProfilePassword(patient.user.password)) {
+                    patient.user.name = input;
+                    cout << "Saved." << endl;
+                } else {
+                    cout << "Change discarded." << endl;
                 }
-                do {
-                    cout << "Enter password: ";
-                    getline(cin, password);
-                } while (password != patient.user.password);
-                patient.user.age = stoi(input);
-                cout << "Saved." << endl;
                 break;
+            }
 
-            case 3:
+            case 2: {
+                int newAge = askAge("Change your age (18-120): ");
+                if (!cin) return;
+
+                if (confirmProfilePassword(patient.user.password)) {
+                    patient.user.age = newAge;
+                    cout << "Saved." << endl;
+                } else {
+                    cout << "Change discarded." << endl;
+                }
+                break;
+            }
+
+            case 3: {
                 for (;;) {
                     cout << "Change your email: ";
                     getline(cin, input);
+                    if (!cin) return;
 
                     if (input.empty()) { cout << "[cannot be blank] "; continue; }
 
-                    patient.user.email = input;
-                    if (!validateEmail(patient, patients)) {
-                        patient.user.email.clear();
+                    // validated on a throwaway copy, not on `patient` itself - patient is
+                    // often a live reference into `patients`, so validating in place would
+                    // make the uniqueness check compare the candidate email against itself
+                    // and always report it as already registered
+                    Patient probe = patient;
+                    probe.user.email = input;
+                    if (!validateEmail(probe, patients)) {
                         cout << "[use name@example.com, and not already registered] ";
                         continue;
                     }
                     break;
                 }
-                do {
-                    cout << "Enter password: ";
-                    getline(cin, password);
-                } while (password != patient.user.password);
-                cout << "Saved." << endl;
-                break;
 
-            case 4:
+                if (confirmProfilePassword(patient.user.password)) {
+                    patient.user.email = input;
+                    cout << "Saved." << endl;
+                } else {
+                    cout << "Change discarded." << endl;
+                }
+                break;
+            }
+
+            case 4: {
                 cout << "Change your contact: ";
                 getline(cin, input);
+                if (!cin) return;
+
                 while (!validatePhoneNo(input)) {
                     cout << "Invalid phone (01x-xxx xxxx). Try again: ";
                     getline(cin, input);
+                    if (!cin) return;
                 }
-                do {
-                    cout << "Enter password: ";
-                    getline(cin, password);
-                } while (password != patient.user.password);
-                patient.user.phoneNo = input;
-                cout << "Saved." << endl;
+
+                if (confirmProfilePassword(patient.user.password)) {
+                    patient.user.phoneNo = input;
+                    cout << "Saved." << endl;
+                } else {
+                    cout << "Change discarded." << endl;
+                }
                 break;
+            }
 
             case 0:
                 savePatients(patients);

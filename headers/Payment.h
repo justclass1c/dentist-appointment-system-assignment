@@ -22,6 +22,10 @@ struct ServiceItem {
     double price;
 };
 
+// Exposed so other domains (e.g. Loyalty) can read real catalog names/prices
+// instead of duplicating them - same pattern as `extern vector<Patient> patients;`
+extern vector<ServiceItem> availableServices;
+
 // Represents one billing record, from invoice through to payment.
 // Reception creates it as PENDING (picks the treatment, sets the amount);
 // only the patient can change it to PAID (picks how they're paying).
@@ -43,8 +47,10 @@ void loadPaymentRecords();
 // Reception only: creates the invoice for a completed appointment.
 // Reception selects the treatment actually rendered and the total is
 // computed and fixed here (with discount auto-applied) - the patient never
-// gets to choose or change what they're billed for.
-void issueInvoice(const string& appointmentID, const string& patientID);
+// gets to choose or change what they're billed for. Takes the acting
+// Session so it can gate a loyalty-reward redemption behind a password
+// confirmation (see applyUnredeemedWin() in Loyalty.h).
+void issueInvoice(const Session& current, const string& appointmentID, const string& patientID);
 
 // Blocks reception from invoicing the same appointment twice.
 bool hasInvoiceForAppointment(const string& appointmentID);
@@ -57,5 +63,8 @@ void payForAppointment(const Session& current);
 // Output
 void displayAllPayments();
 void generateSummaryReport();
+
+// Reception/Admin menu: view all payments / revenue summary
+void paymentReportsMenu();
 
 #endif

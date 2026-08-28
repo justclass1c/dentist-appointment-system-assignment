@@ -36,10 +36,6 @@ void modifyAppointment(const Session& current);
 void cancelAppointment(const Session& current);
 void findNextAvailable();
 
-bool hasActiveAppointment(string patientID);
-int countAppointmentsForDentist(string dentistID);
-bool getAppointmentInfo(string apptID, string& patientIDOut, string& dateOut);
-
 // added: Reception's invoicing entry point, reusing the existing appointment
 // table/selection UI so it doesn't need its own copy of it. Patient payment
 // (payForAppointment) now lives in Payment.h/payment.cpp instead, since the

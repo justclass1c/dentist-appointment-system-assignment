@@ -3,6 +3,8 @@
 #include "../headers/Console.h"
 #include "../headers/Validation.h"
 #include "../headers/Patient.h"
+#include "../headers/Payment.h"
+#include "../headers/Loyalty.h"
 
 const string DENTIST_FILE = "data/dentists.txt";
 
@@ -81,13 +83,6 @@ void saveDentists() {
 Dentist* findDentistById(const string& id) {
     for (auto& d : dentists) {
         if (d.id == id) return &d;
-    }
-    return nullptr;
-}
-
-Dentist* findDentistByEmail(const string email) {
-    for (auto& d : dentists) {       
-        if (d.user.email == email) return &d;
     }
     return nullptr;
 }
@@ -236,9 +231,11 @@ void adminPanel() {
         cout << "1. Register dentist\n";
         cout << "2. Modify dentist information\n";
         cout << "3. Manage all appointments\n";
+        cout << "4. Loyalty draw\n";
+        cout << "5. Payment reports\n";
         cout << "0. Logout\n";
 
-        int choice = readMenuChoice("Choose: ", 0, 3);
+        int choice = readMenuChoice("Choose: ", 0, 5);
 
         switch (choice) {
             case 1:
@@ -257,6 +254,18 @@ void adminPanel() {
                 appointmentMenu(current);
                 break;
             }
+            case 4: {
+                Session current;
+                current.userId   = "ADM001";
+                current.name     = "Administrator";
+                current.password = adminPassword;
+                current.role     = ADMIN;
+                loyaltyMenu(current);
+                break;
+            }
+            case 5:
+                paymentReportsMenu();
+                break;
             case 0:
                 cout << "Logging out.\n";
                 return;
@@ -291,9 +300,11 @@ void receptionMenu() {
         cout << "1. View all dentists\n";
         cout << "2. View all patients\n";
         cout << "3. Manage appointments\n";
+        cout << "4. Loyalty draw\n";
+        cout << "5. Payment reports\n";
         cout << "0. Logout\n";
 
-        int choice = readMenuChoice("Choose: ", 0, 3);
+        int choice = readMenuChoice("Choose: ", 0, 5);
 
         switch (choice) {
             case 1:
@@ -314,6 +325,18 @@ void receptionMenu() {
                 appointmentMenu(current);
                 break;
             }
+            case 4: {
+                Session current;
+                current.userId   = "R001";
+                current.name     = "Reception";
+                current.password = RECEPTION_PASSWORD;
+                current.role     = RECEPTIONIST;
+                loyaltyMenu(current);
+                break;
+            }
+            case 5:
+                paymentReportsMenu();
+                break;
             case 0:
                 cout << "Logging out.\n";
                 return;
