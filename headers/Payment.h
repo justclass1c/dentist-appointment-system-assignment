@@ -22,6 +22,10 @@ struct ServiceItem {
     double price;
 };
 
+// Exposed so other domains (e.g. Loyalty) can read real catalog names/prices
+// instead of duplicating them - same pattern as `extern vector<Patient> patients;`
+extern vector<ServiceItem> availableServices;
+
 // Represents one billing record, from invoice through to payment.
 // Reception creates it as PENDING (picks the treatment, sets the amount);
 // only the patient can change it to PAID (picks how they're paying).
@@ -57,5 +61,8 @@ void payForAppointment(const Session& current);
 // Output
 void displayAllPayments();
 void generateSummaryReport();
+
+// Reception/Admin menu: view all payments / revenue summary
+void paymentReportsMenu();
 
 #endif

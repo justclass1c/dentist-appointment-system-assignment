@@ -4,10 +4,12 @@
 #include "./src/dentist.cpp"
 #include "./src/appointment.cpp"
 #include "./src/payment.cpp"
+#include "./src/loyalty.cpp"
 #include "./headers/Patient.h"
 #include "./headers/Dentist.h"
 #include "./headers/Appointment.h"
 #include "./headers/Payment.h"
+#include "./headers/Loyalty.h"
 #include "./headers/Console.h"
 #include <vector>
 
@@ -32,6 +34,8 @@ void printWelcomeMenu() {
 
 int main() {
     loadDentists();
+    loadLoyaltyEntries(); // must precede loadAppointments(): ageAppointments() grants entries
+    loadLoyaltyWins();    // must precede loadPaymentRecords(): issueInvoice() can auto-redeem a win
     loadAppointments();
     loadPaymentRecords();
 

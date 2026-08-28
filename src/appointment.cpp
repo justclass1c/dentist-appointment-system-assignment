@@ -2,6 +2,7 @@
 #include "../headers/Console.h"
 #include "../headers/Dentist.h"
 #include "../headers/Payment.h"
+#include "../headers/Loyalty.h"
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -18,7 +19,6 @@ const int CLINIC_CLOSE_HOUR  = 17;
 const int SLOT_DURATION_HRS  = 1;
 const int SLOTS_PER_DAY      = (CLINIC_CLOSE_HOUR - CLINIC_OPEN_HOUR) / SLOT_DURATION_HRS;
 
-const int MAX_CHAIRS         = 3;
 const int BOOKING_WINDOW     = 14;
 const int MAX_PASSWORD_TRIES = 3;
 
@@ -48,6 +48,7 @@ static int    toDayNumber(Date d);
 static int    daysBetween(Date from, Date to);
 static int    dayOfWeek(Date d);
 static Date   getToday();
+static int    getCurrentHour();
 static bool   sameDate(Date a, Date b);
 static string formatDate(Date d);
 
@@ -113,12 +114,7 @@ static string lookupDentistName(string dentistID) {
 }
 
 static bool patientExists(string patientID) {
-    if (patientID.length() != 4) return false;
-    if (toupper(patientID[0]) != 'P') return false;
-    for (int i = 1; i < 4; i++) {
-        if (!isdigit(patientID[i])) return false;
-    }
-    return true;
+    return findPatientByID(patients, patientID) != nullptr;
 }
 
 static void raiseInvoice(string apptID, string patientID) {
@@ -229,6 +225,12 @@ static Date getToday() {
     return today;
 }
 
+static int getCurrentHour() {
+    time_t rawTime = time(0);
+    tm* localTime = localtime(&rawTime);
+    return localTime->tm_hour;
+}
+
 static bool sameDate(Date a, Date b) {
     return a.day == b.day && a.month == b.month && a.year == b.year;
 }
@@ -312,13 +314,16 @@ static bool isDentistBusy(string dentistID, Date date, int slotIndex) {
     return false;
 }
 
+// Capacity per hour is simply how many dentists are registered and on staff -
+// every registered dentist automatically counts, no separate admin setting to
+// keep in sync with headcount.
 static int slotCapacity() {
     int onStaff = 0;
     for (size_t i = 0; i < dentists.size(); i++) {
         if (dentists[i].user.name.empty()) continue;
         onStaff++;
     }
-    return (onStaff > MAX_CHAIRS) ? MAX_CHAIRS : onStaff;
+    return onStaff;
 }
 
 static bool patientHasSlot(string patientID, Date date, int slotIndex, const string& excludeID) {
@@ -364,12 +369,24 @@ static string generateAppointmentID() {
 
 static int ageAppointments() {
     Date today = getToday();
+    int currentHour = getCurrentHour();
     int aged = 0;
 
     for (size_t i = 0; i < appointments.size(); i++) {
         if (appointments[i].status != SCHEDULED) continue;
-        if (daysBetween(today, appointments[i].date) < 0) {
+
+        int offset = daysBetween(today, appointments[i].date);
+        bool pastDay = offset < 0;
+
+        // Same-day appointments only aged once their slot's hour has actually
+        // passed - a date-only check would leave a 9am appointment "Scheduled"
+        // until midnight even though it visibly finished hours ago.
+        int slotEndHour = CLINIC_OPEN_HOUR + (appointments[i].slotIndex + 1) * SLOT_DURATION_HRS;
+        bool pastSlotToday = (offset == 0) && (currentHour >= slotEndHour);
+
+        if (pastDay || pastSlotToday) {
             appointments[i].status = COMPLETED;
+            grantLoyaltyEntryForAppointment(appointments[i].appointmentID, appointments[i].patientID);
             aged++;
         }
     }
@@ -1052,6 +1069,7 @@ void modifyAppointment(const Session& current) {
 
     if (field == 5 && newStatus == COMPLETED) {
         raiseInvoice(target.appointmentID, target.patientID);
+        grantLoyaltyEntryForAppointment(target.appointmentID, target.patientID);
     }
 }
 
@@ -1254,34 +1272,3 @@ void appointmentMenu(const Session& current) {
     }
 }
 
-bool hasActiveAppointment(string patientID) {
-    for (size_t i = 0; i < appointments.size(); i++) {
-        if (appointments[i].patientID == patientID &&
-            appointments[i].status == SCHEDULED) {
-            return true;
-        }
-    }
-    return false;
-}
-
-int countAppointmentsForDentist(string dentistID) {
-    int total = 0;
-    for (size_t i = 0; i < appointments.size(); i++) {
-        if (appointments[i].dentistID == dentistID &&
-            appointments[i].status == SCHEDULED) {
-            total++;
-        }
-    }
-    return total;
-}
-
-bool getAppointmentInfo(string apptID, string& patientIDOut, string& dateOut) {
-    for (size_t i = 0; i < appointments.size(); i++) {
-        if (appointments[i].appointmentID == apptID) {
-            patientIDOut = appointments[i].patientID;
-            dateOut      = formatDate(appointments[i].date);
-            return true;
-        }
-    }
-    return false;
-}
