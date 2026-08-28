@@ -95,7 +95,10 @@ void mainMenu(vector<Patient>& patients, const Session& current) {
             case 4: cancelAppointment(current);   break;
             case 5: findNextAvailable();          break;
             case 6:
-                viewPatientProfile(patients, currentUserID);
+                if (viewPatientProfile(patients, currentUserID)) {
+                    cout << "Logging out." << endl;
+                    return;
+                }
                 pauseForKey();
                 break;
             case 7: payForAppointment(current);      break;
@@ -441,9 +444,9 @@ void savePatients(vector<Patient> patients) {
     outFile.close();
 }
 
-void viewPatientProfile(vector<Patient>& patients, string currentUserID) {
+bool viewPatientProfile(vector<Patient>& patients, string currentUserID) {
     Patient* target = findPatientByID(patients, currentUserID);
-    if (target == nullptr) return;
+    if (target == nullptr) return false;
 
     clearScreen();
     cout << "\nYour Profile:" << endl;
@@ -457,11 +460,15 @@ void viewPatientProfile(vector<Patient>& patients, string currentUserID) {
     cout << "Contact: " << target->user.phoneNo << endl;
     cout << "Insurance: " << (target->hasInsurance ? "Yes" : "No") << endl;
 
-    cout << "\nOptions: M = Modify, Q = Quit" << endl;
+    cout << "\nOptions: M = Modify, D = Delete, Q = Quit" << endl;
 
     string input = askInPlace("Choice: ", "");
 
     if (!input.empty() && toupper(input[0]) == 'M') modifyPatient(patients, *target);
+    if (!input.empty() && toupper(input[0]) == 'D') {
+        if (deletePatient(patients, *target)) return true;
+    }
+    return false;
 }
 
 void modifyPatient(vector<Patient>& patients, Patient& patient) {
@@ -569,6 +576,47 @@ void modifyPatient(vector<Patient>& patients, Patient& patient) {
     } while (index != 0);
 }
 
+bool deletePatient(vector<Patient>& patients, Patient& patient) {
+    clearScreen();
+    cout << "\nDelete Patient Profile" << endl;
+    cout << "Patient ID: " << patient.user.id << endl;
+    cout << "Name: " << patient.user.name << endl;
+    cout << "Email: " << patient.user.email << endl;
+
+    char confirm = askLetter("\nAre you sure you want to delete this profile? (Y/N): ",
+                             "YN", "[Y or N] ");
+    if (confirm == 'N') {
+        cout << "Deletion cancelled." << endl;
+        return false;
+    }
+
+    string password;
+    int attempts = 0;
+    while (attempts < 3) {
+        cout << "Enter password to confirm (" << (3 - attempts) << " attempt(s) left): ";
+        getline(cin, password);
+
+        if (password == patient.user.password) {
+            for (int i = 0; i < patients.size(); i++) {
+                if (patients.at(i).user.id == patient.user.id) {
+                    patients.erase(patients.begin() + i);
+                    break;
+                }
+            }
+            savePatients(patients);
+            cout << "Profile deleted." << endl;
+            return true;
+        }
+
+        attempts++;
+        if (attempts < 3) {
+            cout << "[incorrect password] " << endl;
+        }
+    }
+
+    cout << "\nToo many incorrect attempts. Returning to main menu." << endl;
+    return false;
+}
 // added: lookup helper so the Payment module can pull a patient's age/insurance
 // status directly by ID instead of asking the receptionist to re-enter it
 Patient* findPatientByID(vector<Patient>& patients, const string& id) {
