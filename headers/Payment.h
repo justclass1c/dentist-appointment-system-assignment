@@ -47,8 +47,10 @@ void loadPaymentRecords();
 // Reception only: creates the invoice for a completed appointment.
 // Reception selects the treatment actually rendered and the total is
 // computed and fixed here (with discount auto-applied) - the patient never
-// gets to choose or change what they're billed for.
-void issueInvoice(const string& appointmentID, const string& patientID);
+// gets to choose or change what they're billed for. Takes the acting
+// Session so it can gate a loyalty-reward redemption behind a password
+// confirmation (see applyUnredeemedWin() in Loyalty.h).
+void issueInvoice(const Session& current, const string& appointmentID, const string& patientID);
 
 // Blocks reception from invoicing the same appointment twice.
 bool hasInvoiceForAppointment(const string& appointmentID);

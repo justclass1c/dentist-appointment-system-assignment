@@ -78,6 +78,74 @@ static string todayDateStamp() {
     return ss.str();
 }
 
+// Small local date struct + math for computing/checking reward expiry.
+// Duplicated from appointment.cpp's Date/day-count logic for the same
+// one-merged-translation-unit reason explained above - named distinctly
+// (LoyaltyDate, not Date) since Appointment.h's `struct Date` is already in
+// scope by the time this file is reached in the merged build order.
+struct LoyaltyDate { int day, month, year; };
+
+static bool isLoyaltyLeapYear(int year) {
+    if (year % 400 == 0) return true;
+    if (year % 100 == 0) return false;
+    return year % 4 == 0;
+}
+
+static int loyaltyDaysInMonth(int month, int year) {
+    static const int DAYS[12] = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
+    if (month < 1 || month > 12) return 31;
+    if (month == 2 && isLoyaltyLeapYear(year)) return 29;
+    return DAYS[month - 1];
+}
+
+static LoyaltyDate todayAsLoyaltyDate() {
+    time_t rawTime = time(0);
+    tm* localTime = localtime(&rawTime);
+    LoyaltyDate d;
+    d.day   = localTime->tm_mday;
+    d.month = localTime->tm_mon + 1;
+    d.year  = localTime->tm_year + 1900;
+    return d;
+}
+
+static LoyaltyDate addDaysToLoyaltyDate(LoyaltyDate d, int daysToAdd) {
+    d.day += daysToAdd;
+    while (d.day > loyaltyDaysInMonth(d.month, d.year)) {
+        d.day -= loyaltyDaysInMonth(d.month, d.year);
+        d.month++;
+        if (d.month > 12) { d.month = 1; d.year++; }
+    }
+    return d;
+}
+
+static string formatLoyaltyDate(LoyaltyDate d) {
+    stringstream ss;
+    ss << setw(2) << setfill('0') << d.day << "/"
+       << setw(2) << setfill('0') << d.month << "/" << d.year;
+    return ss.str();
+}
+
+static LoyaltyDate parseLoyaltyDate(const string& s) {
+    LoyaltyDate d = { 1, 1, 2000 };
+    char slash1, slash2;
+    stringstream ss(s);
+    ss >> d.day >> slash1 >> d.month >> slash2 >> d.year;
+    return d;
+}
+
+// Strictly before today - a win is still usable on its expiry date itself,
+// only actually expired the day after.
+static bool isLoyaltyDateBeforeToday(LoyaltyDate d) {
+    LoyaltyDate today = todayAsLoyaltyDate();
+    if (d.year != today.year) return d.year < today.year;
+    if (d.month != today.month) return d.month < today.month;
+    return d.day < today.day;
+}
+
+static string computeExpiryDate(const string& fromDrawDate) {
+    return formatLoyaltyDate(addDaysToLoyaltyDate(parseLoyaltyDate(fromDrawDate), LOYALTY_EXPIRY_DAYS));
+}
+
 static string patientDisplayName(const string& patientID) {
     Patient* p = findPatientByID(patients, patientID);
     if (p == nullptr || p->user.name.empty()) return "[" + patientID + "]";
@@ -115,6 +183,11 @@ static double servicePriceByName(const string& name) {
 static double resolvePrizeValue(const PrizeDef& prize) {
     if (prize.type == DISCOUNT_VOUCHER) return prize.fixedValue;
     return servicePriceByName(prize.serviceLookup);
+}
+
+static bool isWinExpired(const LoyaltyWin& w) {
+    if (w.expiryDate.empty()) return false; // defensive - shouldn't happen once loaded
+    return isLoyaltyDateBeforeToday(parseLoyaltyDate(w.expiryDate));
 }
 
 static string sourceToString(EntrySource s) { return s == FROM_PAYMENT ? "PAYMENT" : "APPOINTMENT"; }
@@ -190,6 +263,10 @@ void loadLoyaltyWins() {
         w.drawDate            = f[8];
         w.redeemed            = (!f[9].empty() && f[9][0] == '1');
         w.redeemedPaymentID   = f[10];
+        // Records saved before the expiry feature existed have no field 12 -
+        // backfill using the same drawDate + LOYALTY_EXPIRY_DAYS rule new
+        // wins get, rather than treating old wins as permanently valid.
+        w.expiryDate          = (f.size() >= 12 && !f[11].empty()) ? f[11] : computeExpiryDate(w.drawDate);
         loyaltyWins.push_back(w);
     }
     inFile.close();
@@ -224,7 +301,7 @@ static void saveLoyaltyWins() {
                 << w.patientID << LOYALTY_DELIM << tierToString(w.tier) << LOYALTY_DELIM << typeToString(w.type)
                 << LOYALTY_DELIM << w.prizeDescription << LOYALTY_DELIM << fixed << setprecision(2)
                 << w.prizeValue << LOYALTY_DELIM << w.drawDate << LOYALTY_DELIM << (w.redeemed ? "1" : "0")
-                << LOYALTY_DELIM << w.redeemedPaymentID << "\n";
+                << LOYALTY_DELIM << w.redeemedPaymentID << LOYALTY_DELIM << w.expiryDate << "\n";
     }
     outFile.close();
 }
@@ -370,6 +447,7 @@ void runLoyaltyDraw(const Session& current) {
         win.prizeDescription  = prize.label;
         win.prizeValue        = resolvePrizeValue(prize);
         win.drawDate          = drawDate;
+        win.expiryDate        = computeExpiryDate(drawDate);
         win.redeemed          = false;
         win.redeemedPaymentID = "";
         loyaltyWins.push_back(win);
@@ -377,7 +455,8 @@ void runLoyaltyDraw(const Session& current) {
         cout << "  Winner " << (w + 1) << "/" << numWinners << ":  "
              << entry.patientID << " " << patientDisplayName(entry.patientID)
              << "  ->  [" << TIER_LABEL[prize.tier] << "] " << win.prizeDescription
-             << "   (Win ID " << win.winID << ", ticket " << entry.entryID << ")\n";
+             << "   (Win ID " << win.winID << ", ticket " << entry.entryID
+             << ", valid until " << win.expiryDate << ")\n";
     }
     cout << "  " << string(58, '=') << "\n";
 
@@ -398,18 +477,19 @@ void viewLoyaltyDrawHistory() {
 
     cout << "\n  " << left << setw(9) << "WinID" << setw(10) << "DrawID"
          << setw(11) << "PatientID" << setw(10) << "Tier" << setw(28) << "Prize"
-         << setw(12) << "DrawDate" << setw(10) << "Redeemed" << "RedeemedOn\n";
-    cout << "  " << string(100, '-') << "\n";
+         << setw(12) << "DrawDate" << setw(12) << "Expires" << setw(10) << "Status" << "RedeemedOn\n";
+    cout << "  " << string(112, '-') << "\n";
 
     for (size_t i = 0; i < loyaltyWins.size(); i++) {
         const LoyaltyWin& w = loyaltyWins[i];
+        string status = w.redeemed ? "Redeemed" : (isWinExpired(w) ? "Expired" : "Pending");
         cout << "  " << left << setw(9) << w.winID << setw(10) << w.drawID
              << setw(11) << w.patientID << setw(10) << TIER_LABEL[w.tier]
              << setw(28) << w.prizeDescription << setw(12) << w.drawDate
-             << setw(10) << (w.redeemed ? "Yes" : "No")
+             << setw(12) << w.expiryDate << setw(10) << status
              << (w.redeemed ? w.redeemedPaymentID : "-") << "\n";
     }
-    cout << "  " << string(100, '-') << "\n";
+    cout << "  " << string(112, '-') << "\n";
     cout << "  " << loyaltyWins.size() << " win record(s) shown.\n";
     pauseForKey();
 }
@@ -435,16 +515,22 @@ void loyaltyMenu(const Session& current) {
 // ---------------------------------------------------------
 // Redemption - called from issueInvoice(), mirrors applyDiscount()
 // ---------------------------------------------------------
-vector<string> applyUnredeemedWin(Payment& invoice, const string& patientID) {
+vector<string> applyUnredeemedWin(const Session& current, Payment& invoice, const string& patientID) {
     vector<string> lines;
 
     vector<int> unredeemed;
+    int expiredCount = 0;
     for (size_t i = 0; i < loyaltyWins.size(); i++) {
-        if (loyaltyWins[i].patientID == patientID && !loyaltyWins[i].redeemed) {
-            unredeemed.push_back((int)i);
-        }
+        if (loyaltyWins[i].patientID != patientID || loyaltyWins[i].redeemed) continue;
+        if (isWinExpired(loyaltyWins[i])) { expiredCount++; continue; }
+        unredeemed.push_back((int)i);
     }
-    if (unredeemed.empty()) return lines;
+    if (unredeemed.empty()) {
+        if (expiredCount > 0) {
+            cout << "\n  (" << expiredCount << " reward(s) for this patient expired unused and can no longer be redeemed.)\n";
+        }
+        return lines;
+    }
 
     // Value each win would actually realize on THIS invoice - a percentage voucher
     // scales with the bill, a flat service credit is capped at what's left to pay.
@@ -465,7 +551,8 @@ vector<string> applyUnredeemedWin(Payment& invoice, const string& patientID) {
         const LoyaltyWin& w = loyaltyWins[unredeemed[i]];
         double wouldSave = valueOnThisInvoice(unredeemed[i]);
         cout << "  " << (i + 1) << ". [" << TIER_LABEL[w.tier] << "] " << w.prizeDescription
-             << " -> saves RM " << fixed << setprecision(2) << wouldSave << " on this invoice";
+             << " -> saves RM " << fixed << setprecision(2) << wouldSave << " on this invoice"
+             << " (expires " << w.expiryDate << ")";
         if (i == 0) cout << "  <- best value for this invoice";
         if (w.type == SERVICE_CREDIT && w.prizeValue > wouldSave) {
             cout << "\n     (only RM " << fixed << setprecision(2) << wouldSave << " of RM "
@@ -478,6 +565,15 @@ vector<string> applyUnredeemedWin(Payment& invoice, const string& patientID) {
 
     int choice = readMenuChoice("  Redeem which reward now (0 to skip - keep all pending): ", 0, (int)unredeemed.size());
     if (choice == 0) return lines;
+
+    // This commits immediately and permanently (no un-redeem) - require the
+    // same password confirmation every other commit-worthy action in this
+    // app uses (assignDentist, cancelAppointment, modifyAppointment) so a
+    // mistyped choice doesn't silently burn the wrong reward.
+    if (!confirmStaffPassword(current)) {
+        cout << "  Redemption cancelled - reward left pending.\n";
+        return lines;
+    }
 
     LoyaltyWin& w = loyaltyWins[unredeemed[choice - 1]];
     double off = (w.type == DISCOUNT_VOUCHER) ? (invoice.totalAmount * w.prizeValue) : w.prizeValue;
@@ -501,7 +597,7 @@ vector<string> applyUnredeemedWin(Payment& invoice, const string& patientID) {
 void checkAndShowLoyaltyNotifications(const Session& current) {
     vector<int> unredeemed;
     for (size_t i = 0; i < loyaltyWins.size(); i++) {
-        if (loyaltyWins[i].patientID == current.userId && !loyaltyWins[i].redeemed) {
+        if (loyaltyWins[i].patientID == current.userId && !loyaltyWins[i].redeemed && !isWinExpired(loyaltyWins[i])) {
             unredeemed.push_back((int)i);
         }
     }
@@ -513,7 +609,7 @@ void checkAndShowLoyaltyNotifications(const Session& current) {
     for (size_t i = 0; i < unredeemed.size(); i++) {
         const LoyaltyWin& w = loyaltyWins[unredeemed[i]];
         cout << "  - [" << TIER_LABEL[w.tier] << "] " << w.prizeDescription
-             << "  (won " << w.drawDate << ", ID " << w.winID << ")\n";
+             << "  (won " << w.drawDate << ", ID " << w.winID << ", valid until " << w.expiryDate << ")\n";
     }
     cout << "  This will be applied automatically to your next invoice from Reception.\n";
     pauseForKey();
@@ -541,9 +637,14 @@ void viewMyLoyaltyTickets(const Session& current) {
         const LoyaltyWin& w = loyaltyWins[i];
         if (w.patientID != current.userId) continue;
         any = true;
+
+        string status;
+        if (w.redeemed) status = "- redeemed";
+        else if (isWinExpired(w)) status = "- EXPIRED (unused, was valid until " + w.expiryDate + ")";
+        else status = "- NOT YET REDEEMED (valid until " + w.expiryDate + ")";
+
         cout << "  [" << TIER_LABEL[w.tier] << "] " << w.prizeDescription
-             << "  (won " << w.drawDate << ")  "
-             << (w.redeemed ? "- redeemed" : "- NOT YET REDEEMED") << "\n";
+             << "  (won " << w.drawDate << ")  " << status << "\n";
     }
     if (!any) cout << "  You haven't won a draw yet - keep paying invoices and attending appointments!\n";
     cout << "  " << string(52, '-') << "\n";

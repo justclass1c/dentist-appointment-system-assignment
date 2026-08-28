@@ -248,7 +248,7 @@ static void applyDiscount(Payment& p, bool isSenior, bool hasInsurance) {
 // ---------------------------------------------------------
 // Reception: issue the invoice
 // ---------------------------------------------------------
-void issueInvoice(const string& appointmentID, const string& patientID) {
+void issueInvoice(const Session& current, const string& appointmentID, const string& patientID) {
     Patient* patient = findPatientByID(patients, patientID);
 
     bool isSenior = false;
@@ -273,7 +273,7 @@ void issueInvoice(const string& appointmentID, const string& patientID) {
     invoice.appointmentID = appointmentID;
     invoice.totalAmount = calculateTotal(services); // automatically calculated, no manual entry
     applyDiscount(invoice, isSenior, hasInsurance);  // automatically applied, no manual entry
-    vector<string> loyaltyLines = applyUnredeemedWin(invoice, patientID); // automatically applied, no manual entry
+    vector<string> loyaltyLines = applyUnredeemedWin(current, invoice, patientID); // reception picks which reward (if any) to apply, confirmed before it commits
     invoice.method = "";       // not chosen yet - that's the patient's step
     invoice.invoiceDate = todayString();
     invoice.paymentDate = "";  // not paid yet

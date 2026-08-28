@@ -138,7 +138,7 @@ void assignPaymentForAppointment(const Session& current) {
 
     displayAppointmentDetails(target);
     cout << "\n  Issuing invoice for patient " << target.patientID << " " << lookupPatientName(target.patientID) << "\n";
-    issueInvoice(target.appointmentID, target.patientID);
+    issueInvoice(current, target.appointmentID, target.patientID);
     pauseForKey();
 }
 

@@ -10,6 +10,7 @@ using namespace std;
 
 // Named Constants
 const int MAX_DRAW_WINNERS = 10; // sanity cap on how many winners staff can draw in one ceremony
+const int LOYALTY_EXPIRY_DAYS = 90; // an unredeemed win can no longer be applied after this many days
 
 // How a ticket was earned - lets the win/audit trail show provenance
 enum EntrySource { FROM_PAYMENT, FROM_APPOINTMENT };
@@ -33,8 +34,9 @@ struct LoyaltyEntry {
     bool used;
 };
 
-// One drawn outcome. Created the instant a ticket wins; auto-redeemed the next
-// time Reception issues that patient any invoice (see issueInvoice()).
+// One drawn outcome. Created the instant a ticket wins; offered for redemption
+// (reception's choice, not automatic) the next time Reception issues that
+// patient any invoice (see issueInvoice()).
 struct LoyaltyWin {
     string winID;              // "LW001", "LW002", ...
     string drawID;              // "DRAW001" - groups winners chosen in the same ceremony run
@@ -46,6 +48,8 @@ struct LoyaltyWin {
     double prizeValue;          // DISCOUNT_VOUCHER: fraction 0-1 (0.30 = 30%);
                                  // SERVICE_CREDIT: RM amount, captured from availableServices at draw time
     string drawDate;
+    string expiryDate;          // drawDate + LOYALTY_EXPIRY_DAYS, fixed the moment the win is created -
+                                 // once today is past this, an unredeemed win can no longer be applied
     bool redeemed;
     string redeemedPaymentID;   // "" until redeemed, then the paymentID it was applied to
 };
@@ -66,11 +70,14 @@ void loyaltyMenu(const Session& current);
 void runLoyaltyDraw(const Session& current);
 void viewLoyaltyDrawHistory();
 
-// Auto-redemption hook, called from issueInvoice() - mirrors applyDiscount().
-// Applies every one of this patient's unredeemed wins (oldest first), marks
-// them redeemed against `invoice`, and returns one printable line per win
-// applied (empty vector = nothing to apply, the common case).
-vector<string> applyUnredeemedWin(Payment& invoice, const string& patientID);
+// Redemption hook, called from issueInvoice() - triggered automatically at
+// invoicing time like applyDiscount(), but not automatic in what it does:
+// reception is shown each of the patient's unredeemed wins with its real
+// value on this invoice and picks at most one to apply, confirmed with a
+// password before it commits (unrecoverable once confirmed - there is no
+// un-redeem). Returns one printable line if a win was applied, empty if
+// none was (no unredeemed wins, or reception chose to skip).
+vector<string> applyUnredeemedWin(const Session& current, Payment& invoice, const string& patientID);
 
 // Patient-facing "you won" notice - checked once per login, at the top of mainMenu.
 void checkAndShowLoyaltyNotifications(const Session& current);
