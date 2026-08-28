@@ -395,7 +395,8 @@ void runLoyaltyDraw(const Session& current) {
 
     vector<int> pool;
     for (size_t i = 0; i < loyaltyEntries.size(); i++) {
-        if (!loyaltyEntries[i].used) pool.push_back((int)i);
+        if (!loyaltyEntries[i].used && findPatientByID(patients, loyaltyEntries[i].patientID) != nullptr)
+            pool.push_back((int)i);
     }
 
     if (pool.empty()) {
