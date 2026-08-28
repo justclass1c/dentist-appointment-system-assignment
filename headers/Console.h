@@ -63,6 +63,14 @@ inline void pauseForKey() {
     clearLine();
 }
 
+// Shared module/menu header, one visual style for every screen in the app
+// (after the welcome screen, which keeps its own distinct look on purpose).
+inline void printModuleHeader(const string& title) {
+    cout << "\n" << string(78, '=') << "\n";
+    cout << "  " << title << "\n";
+    cout << string(78, '=') << "\n";
+}
+
 inline int readMenuChoice(const string& label, int low, int high) {
     string note;
     while (true) {

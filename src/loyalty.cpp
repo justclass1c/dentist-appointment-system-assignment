@@ -164,6 +164,7 @@ static bool confirmStaffPassword(const Session& current) {
         if (!cin) return false;
 
         if (entered == current.password) {
+            acceptInPlace(label.str(), string(entered.length(), '*'));
             cout << "  Password confirmed.\n";
             return true;
         }
@@ -389,9 +390,7 @@ void grantLoyaltyEntryForAppointment(const string& appointmentID, const string& 
 // Staff: run the draw ceremony
 // ---------------------------------------------------------
 void runLoyaltyDraw(const Session& current) {
-    cout << "\n" << string(58, '=') << "\n";
-    cout << "  Loyalty Draw Ceremony\n";
-    cout << string(58, '=') << "\n";
+    printModuleHeader("Loyalty Draw Ceremony");
 
     vector<int> pool;
     for (size_t i = 0; i < loyaltyEntries.size(); i++) {
@@ -425,7 +424,8 @@ void runLoyaltyDraw(const Session& current) {
     string drawID   = generateDrawID();
     string drawDate = todayDateStamp();
 
-    cout << "\n  ========== DRAW " << drawID << " (" << drawDate << ") ==========\n";
+    cout << "\n  Draw " << drawID << " - " << drawDate << "\n";
+    cout << "  " << string(52, '-') << "\n";
     for (int w = 0; w < numWinners; w++) {
         uniform_int_distribution<size_t> ticketPick(0, pool.size() - 1);
         size_t poolPos = ticketPick(rng);
@@ -452,13 +452,12 @@ void runLoyaltyDraw(const Session& current) {
         win.redeemedPaymentID = "";
         loyaltyWins.push_back(win);
 
-        cout << "  Winner " << (w + 1) << "/" << numWinners << ":  "
+        cout << "  Winner " << (w + 1) << "/" << numWinners << ": "
              << entry.patientID << " " << patientDisplayName(entry.patientID)
-             << "  ->  [" << TIER_LABEL[prize.tier] << "] " << win.prizeDescription
-             << "   (Win ID " << win.winID << ", ticket " << entry.entryID
-             << ", valid until " << win.expiryDate << ")\n";
+             << " -> [" << TIER_LABEL[prize.tier] << "] " << win.prizeDescription
+             << " (" << win.winID << ", valid until " << win.expiryDate << ")\n";
     }
-    cout << "  " << string(58, '=') << "\n";
+    cout << "  " << string(52, '-') << "\n";
 
     saveLoyaltyEntries();
     saveLoyaltyWins();
@@ -469,27 +468,29 @@ void runLoyaltyDraw(const Session& current) {
 // Staff: draw history / audit trail
 // ---------------------------------------------------------
 void viewLoyaltyDrawHistory() {
+    printModuleHeader("Loyalty Draw History");
+
     if (loyaltyWins.empty()) {
         cout << "\n  No draw history yet - run a draw ceremony first.\n";
         pauseForKey();
         return;
     }
 
-    cout << "\n  " << left << setw(9) << "WinID" << setw(10) << "DrawID"
-         << setw(11) << "PatientID" << setw(10) << "Tier" << setw(28) << "Prize"
-         << setw(12) << "DrawDate" << setw(12) << "Expires" << setw(10) << "Status" << "RedeemedOn\n";
-    cout << "  " << string(112, '-') << "\n";
+    cout << "\n  " << left << setw(8) << "WinID" << setw(9) << "DrawID"
+         << setw(9) << "Patient" << setw(9) << "Tier" << setw(27) << "Prize"
+         << setw(11) << "Won" << setw(11) << "Expires" << setw(9) << "Status" << "Invoice\n";
+    cout << "  " << string(100, '-') << "\n";
 
     for (size_t i = 0; i < loyaltyWins.size(); i++) {
         const LoyaltyWin& w = loyaltyWins[i];
         string status = w.redeemed ? "Redeemed" : (isWinExpired(w) ? "Expired" : "Pending");
-        cout << "  " << left << setw(9) << w.winID << setw(10) << w.drawID
-             << setw(11) << w.patientID << setw(10) << TIER_LABEL[w.tier]
-             << setw(28) << w.prizeDescription << setw(12) << w.drawDate
-             << setw(12) << w.expiryDate << setw(10) << status
+        cout << "  " << left << setw(8) << w.winID << setw(9) << w.drawID
+             << setw(9) << w.patientID << setw(9) << TIER_LABEL[w.tier]
+             << setw(27) << w.prizeDescription << setw(11) << w.drawDate
+             << setw(11) << w.expiryDate << setw(9) << status
              << (w.redeemed ? w.redeemedPaymentID : "-") << "\n";
     }
-    cout << "  " << string(112, '-') << "\n";
+    cout << "  " << string(100, '-') << "\n";
     cout << "  " << loyaltyWins.size() << " win record(s) shown.\n";
     pauseForKey();
 }
@@ -497,12 +498,13 @@ void viewLoyaltyDrawHistory() {
 void loyaltyMenu(const Session& current) {
     int choice;
     do {
-        cout << "\n--- Loyalty Draw" << (current.role == ADMIN ? " (Admin)" : " (Reception)") << " ---\n";
-        cout << "1. Run a draw ceremony\n";
-        cout << "2. View draw history\n";
-        cout << "0. Back\n";
+        clearScreen();
+        printModuleHeader("Loyalty Draw - " + string(current.role == ADMIN ? "Admin" : "Reception"));
+        cout << "\n  1. Run a draw ceremony\n";
+        cout << "  2. View draw history\n";
+        cout << "  0. Back\n";
 
-        choice = readMenuChoice("Choose: ", 0, 2);
+        choice = readMenuChoice("\n  Choice: ", 0, 2);
 
         switch (choice) {
             case 1: runLoyaltyDraw(current);  break;
@@ -545,23 +547,21 @@ vector<string> applyUnredeemedWin(const Session& current, Payment& invoice, cons
         return valueOnThisInvoice(a) > valueOnThisInvoice(b);
     });
 
-    cout << "\n  This patient has " << unredeemed.size() << " unredeemed loyalty reward(s):\n";
-    cout << "  " << string(74, '-') << "\n";
+    cout << "\n  This patient has " << unredeemed.size()
+         << " unredeemed loyalty reward(s) - best value for this invoice listed first:\n";
+    cout << "  " << string(76, '-') << "\n";
     for (size_t i = 0; i < unredeemed.size(); i++) {
         const LoyaltyWin& w = loyaltyWins[unredeemed[i]];
         double wouldSave = valueOnThisInvoice(unredeemed[i]);
         cout << "  " << (i + 1) << ". [" << TIER_LABEL[w.tier] << "] " << w.prizeDescription
-             << " -> saves RM " << fixed << setprecision(2) << wouldSave << " on this invoice"
-             << " (expires " << w.expiryDate << ")";
-        if (i == 0) cout << "  <- best value for this invoice";
+             << " - saves RM " << fixed << setprecision(2) << wouldSave
+             << " (valid until " << w.expiryDate << ")\n";
         if (w.type == SERVICE_CREDIT && w.prizeValue > wouldSave) {
-            cout << "\n     (only RM " << fixed << setprecision(2) << wouldSave << " of RM "
-                 << fixed << setprecision(2) << w.prizeValue << " value used - RM "
-                 << fixed << setprecision(2) << (w.prizeValue - wouldSave) << " would be left unused)";
+            cout << "     only RM " << fixed << setprecision(2) << wouldSave << " of this RM "
+                 << fixed << setprecision(2) << w.prizeValue << " reward would be used\n";
         }
-        cout << "\n";
     }
-    cout << "  " << string(74, '-') << "\n";
+    cout << "  " << string(76, '-') << "\n";
 
     int choice = readMenuChoice("  Redeem which reward now (0 to skip - keep all pending): ", 0, (int)unredeemed.size());
     if (choice == 0) return lines;
@@ -616,9 +616,7 @@ void checkAndShowLoyaltyNotifications(const Session& current) {
 }
 
 void viewMyLoyaltyTickets(const Session& current) {
-    cout << "\n" << string(58, '=') << "\n";
-    cout << "  My Loyalty Tickets\n";
-    cout << string(58, '=') << "\n";
+    printModuleHeader("My Loyalty Tickets");
 
     int totalTickets = 0, unusedTickets = 0;
     for (size_t i = 0; i < loyaltyEntries.size(); i++) {

@@ -406,6 +406,8 @@ void payForAppointment(const Session& current) {
 // Output
 // ---------------------------------------------------------
 void displayAllPayments() {
+    printModuleHeader("All Payments");
+
     if (paymentHistory.empty()) {
         cout << "\n  No payment records found.\n";
         return;
@@ -426,6 +428,8 @@ void displayAllPayments() {
 }
 
 void generateSummaryReport() {
+    printModuleHeader("Revenue Summary");
+
     double collectedRevenue = 0.0;
     double pendingRevenue = 0.0;
     int cashCount = 0, cardCount = 0, insuranceCount = 0, pendingCount = 0;
@@ -444,27 +448,26 @@ void generateSummaryReport() {
         }
     }
 
-    cout << "\n  ===== PAYMENT SUMMARY REPORT =====\n";
-    cout << "  Total Invoices: " << paymentHistory.size() << "\n";
+    cout << "\n  Total Invoices: " << paymentHistory.size() << "\n";
     cout << "  Collected Revenue: RM " << fixed << setprecision(2) << collectedRevenue << "\n";
     cout << "  Pending (Unpaid) : RM " << fixed << setprecision(2) << pendingRevenue
          << " across " << pendingCount << " invoice(s)\n";
-    cout << "  -----------------------------------\n";
+    cout << "  " << string(35, '-') << "\n";
     cout << "  Cash Payments:      " << cashCount << "\n";
     cout << "  Card Payments:      " << cardCount << "\n";
     cout << "  Insurance Payments: " << insuranceCount << "\n";
-    cout << "  ===================================\n";
 }
 
 void paymentReportsMenu() {
     int choice;
     do {
-        cout << "\n--- Payment Reports ---\n";
-        cout << "1. View all payments\n";
-        cout << "2. Revenue summary\n";
-        cout << "0. Back\n";
+        clearScreen();
+        printModuleHeader("Payment Reports");
+        cout << "\n  1. View all payments\n";
+        cout << "  2. Revenue summary\n";
+        cout << "  0. Back\n";
 
-        choice = readMenuChoice("Choose: ", 0, 2);
+        choice = readMenuChoice("\n  Choice: ", 0, 2);
 
         switch (choice) {
             case 1: displayAllPayments();     pauseForKey(); break;

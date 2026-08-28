@@ -41,16 +41,16 @@ static string nextPatientId(const vector<Patient>& patients) {
 
 static void printPatientMenu(const Session& current) {
     clearScreen();
-    cout << "\nWelcome, " << current.name << "!" << endl;
-    cout << "1. Schedule an appointment" << endl;
-    cout << "2. View my appointments" << endl;
-    cout << "3. Modify an appointment" << endl;
-    cout << "4. Cancel an appointment" << endl;
-    cout << "5. Find the next available slot" << endl;
-    cout << "6. View profile" << endl;
-    cout << "7. Pay an invoice" << endl;
-    cout << "8. My loyalty tickets" << endl;
-    cout << "0. Logout" << endl;
+    printModuleHeader("Welcome, " + current.name + "!");
+    cout << "\n  1. Schedule an appointment" << endl;
+    cout << "  2. View my appointments" << endl;
+    cout << "  3. Modify an appointment" << endl;
+    cout << "  4. Cancel an appointment" << endl;
+    cout << "  5. Find the next available slot" << endl;
+    cout << "  6. View profile" << endl;
+    cout << "  7. Pay an invoice" << endl;
+    cout << "  8. My loyalty tickets" << endl;
+    cout << "  0. Logout" << endl;
 }
 
 void mainMenu(vector<Patient>& patients, const Session& current) {
@@ -66,7 +66,7 @@ void mainMenu(vector<Patient>& patients, const Session& current) {
         }
 
         clearLine();
-        cout << note << "Choice: " << flush;
+        cout << note << "  Choice: " << flush;
         getline(cin, line);
         stayOnPromptLine();
 
@@ -80,11 +80,12 @@ void mainMenu(vector<Patient>& patients, const Session& current) {
         }
 
         clearLine();
-        cout << "Choice: " << input << endl;
+        cout << "  Choice: " << input << endl;
         note.clear();
 
         if (input == 0) {
             cout << "Logging out." << endl;
+            pauseForKey();
             return;
         }
 
@@ -183,7 +184,10 @@ static bool confirmProfilePassword(const string& actualPassword) {
     for (int attempt = 1; attempt <= MAX_TRIES; attempt++) {
         string entered = askInPlace("Enter password: ", note);
         if (!cin) return false;
-        if (entered == actualPassword) return true;
+        if (entered == actualPassword) {
+            acceptInPlace("Enter password: ", string(entered.length(), '*'));
+            return true;
+        }
         note = "[incorrect] ";
     }
     cout << "[!] Too many failed attempts.\n";
@@ -256,11 +260,8 @@ Patient inputPatientDetails(string id, vector<Patient>& patients) {
     acceptInPlace("Allergies (or 'none'): ", p.allergies);
 
     // added: capture insurance status so Payment module can auto-apply the discount
-    char insuranceAns;
-    cout << "Do you have dental insurance coverage? (Y/N): ";
-    cin >> insuranceAns;
-    cin.ignore();
-    p.hasInsurance = (toupper(insuranceAns) == 'Y');
+    char insuranceAns = askLetter("Do you have dental insurance coverage? (Y/N): ", "YN", "[Y or N] ");
+    p.hasInsurance = (insuranceAns == 'Y');
 
     return p;
 }
@@ -446,52 +447,51 @@ void viewPatientProfile(vector<Patient>& patients, string currentUserID) {
     if (target == nullptr) return;
 
     clearScreen();
-    cout << "\nYour Profile:" << endl;
-    cout << "Patient ID: " << target->user.id << endl;
-    cout << "Name: " << target->user.name << endl;
-    cout << "Age: " << target->user.age << endl;
+    printModuleHeader("View Profile");
+    cout << "\n  Patient ID: " << target->user.id << endl;
+    cout << "  Name: " << target->user.name << endl;
+    cout << "  Age: " << target->user.age << endl;
     char g = toupper(target->user.gender);
-    cout << "Gender: " << (g == 'M' ? "Male" : g == 'F' ? "Female" : "Not recorded") << endl;
-    cout << "Email: " << target->user.email << endl;
-    cout << "NRIC: " << target->user.nric << endl;
-    cout << "Contact: " << target->user.phoneNo << endl;
-    cout << "Insurance: " << (target->hasInsurance ? "Yes" : "No") << endl;
+    cout << "  Gender: " << (g == 'M' ? "Male" : g == 'F' ? "Female" : "Not recorded") << endl;
+    cout << "  Email: " << target->user.email << endl;
+    cout << "  NRIC: " << target->user.nric << endl;
+    cout << "  Contact: " << target->user.phoneNo << endl;
+    cout << "  Insurance: " << (target->hasInsurance ? "Yes" : "No") << endl;
 
-    cout << "\nOptions: M = Modify, Q = Quit" << endl;
+    cout << "\n  Options: M = Modify, Q = Quit" << endl;
 
-    string input = askInPlace("Choice: ", "");
+    string input = askInPlace("  Choice: ", "");
 
     if (!input.empty() && toupper(input[0]) == 'M') modifyPatient(patients, *target);
 }
 
 void modifyPatient(vector<Patient>& patients, Patient& patient) {
-    clearScreen();
     int index = 0;
-    string input;
 
     do {
-        cout << "\nChoose a field to change." << endl;
-        cout << "Your Profile:" << endl;
-        cout << "1. Name   : " << patient.user.name << endl;
-        cout << "2. Age    : " << patient.user.age << endl;
-        cout << "3. Email  : " << patient.user.email << endl;
-        cout << "4. Contact: " << patient.user.phoneNo << endl;
-        cout << "0. Done" << endl;
+        clearScreen();
+        printModuleHeader("Modify Profile");
+        cout << "\n  1. Name   : " << patient.user.name << endl;
+        cout << "  2. Age    : " << patient.user.age << endl;
+        cout << "  3. Email  : " << patient.user.email << endl;
+        cout << "  4. Contact: " << patient.user.phoneNo << endl;
+        cout << "  0. Done" << endl;
 
-        index = readMenuChoice("Choice: ", 0, 4);
+        index = readMenuChoice("\n  Choice: ", 0, 4);
 
         switch (index) {
             case 1: {
-                cout << "Change your name: ";
-                getline(cin, input);
+                string typed = trimInput(askInPlace("Change your name: ", ""));
                 if (!cin) return;
+                acceptInPlace("Change your name: ", typed);
 
                 if (confirmProfilePassword(patient.user.password)) {
-                    patient.user.name = input;
+                    patient.user.name = typed;
                     cout << "Saved." << endl;
                 } else {
                     cout << "Change discarded." << endl;
                 }
+                pauseForKey();
                 break;
             }
 
@@ -505,56 +505,59 @@ void modifyPatient(vector<Patient>& patients, Patient& patient) {
                 } else {
                     cout << "Change discarded." << endl;
                 }
+                pauseForKey();
                 break;
             }
 
             case 3: {
+                string emailNote, typed;
                 for (;;) {
-                    cout << "Change your email: ";
-                    getline(cin, input);
+                    typed = trimInput(askInPlace("Change your email: ", emailNote));
                     if (!cin) return;
 
-                    if (input.empty()) { cout << "[cannot be blank] "; continue; }
+                    if (typed.empty()) { emailNote = "[cannot be blank] "; continue; }
 
                     // validated on a throwaway copy, not on `patient` itself - patient is
                     // often a live reference into `patients`, so validating in place would
                     // make the uniqueness check compare the candidate email against itself
                     // and always report it as already registered
                     Patient probe = patient;
-                    probe.user.email = input;
+                    probe.user.email = typed;
                     if (!validateEmail(probe, patients)) {
-                        cout << "[use name@example.com, and not already registered] ";
+                        emailNote = "[use name@example.com, and not already registered] ";
                         continue;
                     }
+                    acceptInPlace("Change your email: ", typed);
                     break;
                 }
 
                 if (confirmProfilePassword(patient.user.password)) {
-                    patient.user.email = input;
+                    patient.user.email = typed;
                     cout << "Saved." << endl;
                 } else {
                     cout << "Change discarded." << endl;
                 }
+                pauseForKey();
                 break;
             }
 
             case 4: {
-                cout << "Change your contact: ";
-                getline(cin, input);
-                if (!cin) return;
-
-                while (!validatePhoneNo(input)) {
-                    cout << "Invalid phone (01x-xxx xxxx). Try again: ";
-                    getline(cin, input);
+                string phoneNote, typed;
+                while (true) {
+                    typed = trimInput(askInPlace("Change your contact: ", phoneNote));
                     if (!cin) return;
+                    if (validatePhoneNo(typed)) break;
+                    phoneNote = "[use 01x-xxx xxxx] ";
                 }
+                acceptInPlace("Change your contact: ", typed);
 
                 if (confirmProfilePassword(patient.user.password)) {
-                    patient.user.phoneNo = input;
+                    patient.user.phoneNo = typed;
                     cout << "Saved." << endl;
                 } else {
                     cout << "Change discarded." << endl;
                 }
+                pauseForKey();
                 break;
             }
 
@@ -564,6 +567,7 @@ void modifyPatient(vector<Patient>& patients, Patient& patient) {
 
             default:
                 cout << "Invalid input." << endl;
+                pauseForKey();
                 break;
         }
     } while (index != 0);

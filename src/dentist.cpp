@@ -139,11 +139,13 @@ void adminRegisterDentist() {
     dentists.push_back(d);
     saveDentists();
     cout << "Dentist registered successfully.\n";
+    pauseForKey();
 }
 
 void adminModifyDentist() {
     if (dentists.empty()) {
         cout << "\nNo dentists are registered yet.\n";
+        pauseForKey();
         return;
     }
 
@@ -163,7 +165,7 @@ void adminModifyDentist() {
 
     while (true) {
         id = trim(askInPlace("Dentist ID (e.g. D001): ", note));
-        if (!cin || id == "0") { clearLine(); cout << "Cancelled.\n"; return; }
+        if (!cin || id == "0") { clearLine(); cout << "Cancelled.\n"; pauseForKey(); return; }
 
         d = findDentistById(id);
         if (d != NULL) break;
@@ -223,19 +225,21 @@ void adminModifyDentist() {
 
     saveDentists();
     cout << "\nDentist information updated.\n";
+    pauseForKey();
 }
 
 void adminPanel() {
     while (true) {
-        cout << "\n--- Admin Panel ---\n";
-        cout << "1. Register dentist\n";
-        cout << "2. Modify dentist information\n";
-        cout << "3. Manage all appointments\n";
-        cout << "4. Loyalty draw\n";
-        cout << "5. Payment reports\n";
-        cout << "0. Logout\n";
+        clearScreen();
+        printModuleHeader("Admin Panel");
+        cout << "\n  1. Register dentist\n";
+        cout << "  2. Modify dentist information\n";
+        cout << "  3. Manage all appointments\n";
+        cout << "  4. Loyalty draw\n";
+        cout << "  5. Payment reports\n";
+        cout << "  0. Logout\n";
 
-        int choice = readMenuChoice("Choose: ", 0, 5);
+        int choice = readMenuChoice("\n  Choice: ", 0, 5);
 
         switch (choice) {
             case 1:
@@ -268,6 +272,7 @@ void adminPanel() {
                 break;
             case 0:
                 cout << "Logging out.\n";
+                pauseForKey();
                 return;
         }
     }
@@ -277,6 +282,7 @@ void receptionViewAllDentists() {
     if (dentists.empty()) {
         cout << "\nNo dentists are registered yet.\n"
             << "An admin can add one from the main menu: Login Admin > Register dentist.\n";
+        pauseForKey();
         return;
     }
 
@@ -296,15 +302,16 @@ void receptionViewAllDentists() {
 
 void receptionMenu() {
     while (true) {
-        cout << "\n--- Reception Menu ---\n";
-        cout << "1. View all dentists\n";
-        cout << "2. View all patients\n";
-        cout << "3. Manage appointments\n";
-        cout << "4. Loyalty draw\n";
-        cout << "5. Payment reports\n";
-        cout << "0. Logout\n";
+        clearScreen();
+        printModuleHeader("Reception Menu");
+        cout << "\n  1. View all dentists\n";
+        cout << "  2. View all patients\n";
+        cout << "  3. Manage appointments\n";
+        cout << "  4. Loyalty draw\n";
+        cout << "  5. Payment reports\n";
+        cout << "  0. Logout\n";
 
-        int choice = readMenuChoice("Choose: ", 0, 5);
+        int choice = readMenuChoice("\n  Choice: ", 0, 5);
 
         switch (choice) {
             case 1:
@@ -339,6 +346,7 @@ void receptionMenu() {
                 break;
             case 0:
                 cout << "Logging out.\n";
+                pauseForKey();
                 return;
         }
     }
@@ -346,11 +354,12 @@ void receptionMenu() {
 
 void dentistMenu(Dentist* d) {
     while (true) {
-        cout << "\n--- Dentist Menu (" << d->user.name << ") ---\n";
-        cout << "1. My appointments\n";
-        cout << "0. Logout\n";
+        clearScreen();
+        printModuleHeader("Dentist Menu - " + d->user.name);
+        cout << "\n  1. My appointments\n";
+        cout << "  0. Logout\n";
 
-        int choice = readMenuChoice("Choose: ", 0, 1);
+        int choice = readMenuChoice("\n  Choice: ", 0, 1);
 
         if (choice == 1) {
             Session current;
@@ -361,6 +370,7 @@ void dentistMenu(Dentist* d) {
             appointmentMenu(current);
         } else {
             cout << "Logging out.\n";
+            pauseForKey();
             return;
         }
     }
@@ -372,6 +382,7 @@ void loginDentist() {
     if (dentists.empty()) {
         cout << "No dentists are registered yet.\n"
             << "An admin can add one from the main menu: Login Admin > Register dentist.\n";
+        pauseForKey();
         return;
     }
 
@@ -380,7 +391,7 @@ void loginDentist() {
     Dentist* d = nullptr;
     while (true) {
         id = trim(askInPlace("ID: ", note));
-        if (!cin || id == "0") { clearLine(); cout << "Login cancelled.\n"; return; }
+        if (!cin || id == "0") { clearLine(); cout << "Login cancelled.\n"; pauseForKey(); return; }
 
         if (id.empty()) { note = "[cannot be blank] "; continue; }
 
@@ -393,14 +404,13 @@ void loginDentist() {
     note.clear();
     while (true) {
         pass = trim(askInPlace("Password: ", note));
-        if (!cin || pass == "0") { clearLine(); cout << "Login cancelled.\n"; return; }
+        if (!cin || pass == "0") { clearLine(); cout << "Login cancelled.\n"; pauseForKey(); return; }
         if (pass.empty()) { note = "[cannot be blank] "; continue; }
         if (pass == d->user.password) break;
         note = "[incorrect password] ";
     }
     acceptInPlace("Password: ", string(pass.length(), '*'));
 
-    cout << "Login successful. Welcome, " << d->user.name << "!\n";
     dentistMenu(d);
 }
 
@@ -411,7 +421,7 @@ void loginReception() {
 
     while (true) {
         username = trim(askInPlace("Username: ", note));
-        if (!cin || username == "0") { clearLine(); cout << "Login cancelled.\n"; return; }
+        if (!cin || username == "0") { clearLine(); cout << "Login cancelled.\n"; pauseForKey(); return; }
         if (username == RECEPTION_USERNAME) break;
         note = "[no such user] ";
     }
@@ -420,13 +430,12 @@ void loginReception() {
     note.clear();
     while (true) {
         pass = trim(askInPlace("Password: ", note));
-        if (!cin || pass == "0") { clearLine(); cout << "Login cancelled.\n"; return; }
+        if (!cin || pass == "0") { clearLine(); cout << "Login cancelled.\n"; pauseForKey(); return; }
         if (pass == RECEPTION_PASSWORD) break;
         note = "[incorrect password] ";
     }
     acceptInPlace("Password: ", string(pass.length(), '*'));
 
-    cout << "Reception login successful.\n";
     receptionMenu();
 }
 
@@ -437,7 +446,7 @@ void loginAdmin() {
 
     while (true) {
         name = trim(askInPlace("Admin name: ", note));
-        if (!cin || name == "0") { clearLine(); cout << "Login cancelled.\n"; return; }
+        if (!cin || name == "0") { clearLine(); cout << "Login cancelled.\n"; pauseForKey(); return; }
         if (name == adminName) break;
         note = "[no such admin] ";
     }
@@ -446,12 +455,11 @@ void loginAdmin() {
     note.clear();
     while (true) {
         pass = trim(askInPlace("Admin password: ", note));
-        if (!cin || pass == "0") { clearLine(); cout << "Login cancelled.\n"; return; }
+        if (!cin || pass == "0") { clearLine(); cout << "Login cancelled.\n"; pauseForKey(); return; }
         if (pass == adminPassword) break;
         note = "[incorrect password] ";
     }
     acceptInPlace("Admin password: ", string(pass.length(), '*'));
 
-    cout << "Admin login successful.\n";
     adminPanel();
 }

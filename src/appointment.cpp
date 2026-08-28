@@ -73,7 +73,6 @@ static bool   readDate(const string& prompt, Date& result);
 static char   readChoice(const string& prompt, const string& allowed);
 static bool   confirmPassword(const Session& current);
 
-static void printModuleHeader(const string& title);
 static void displayAvailableSlots(int grid[][SLOTS_PER_DAY], Date date);
 static void displayAppointmentDetails(const Appointment& a);
 static void displayAppointmentTable(const vector<int>& rows);
@@ -624,7 +623,7 @@ static bool confirmPassword(const Session& current) {
         if (!cin) { cout << endl; return false; }
 
         if (entered == current.password) {
-            clearLine();
+            acceptInPlace(label.str(), string(entered.length(), '*'));
             cout << "  Password confirmed." << endl;
             return true;
         }
@@ -634,12 +633,6 @@ static bool confirmPassword(const Session& current) {
     clearLine();
     cout << "  [!] Too many failed attempts. No changes were made." << endl;
     return false;
-}
-
-static void printModuleHeader(const string& title) {
-    cout << "\n" << string(78, '=') << "\n";
-    cout << "  " << title << "\n";
-    cout << string(78, '=') << "\n";
 }
 
 static void displayAvailableSlots(int grid[][SLOTS_PER_DAY], Date date) {
@@ -952,6 +945,7 @@ void scheduleAppointment(const Session& current) {
                 break;
         }
     }
+    pauseForKey();
 }
 
 void viewAppointments(const Session& current) {
@@ -1071,6 +1065,7 @@ void modifyAppointment(const Session& current) {
         raiseInvoice(target.appointmentID, target.patientID);
         grantLoyaltyEntryForAppointment(target.appointmentID, target.patientID);
     }
+    pauseForKey();
 }
 
 void cancelAppointment(const Session& current) {
@@ -1082,6 +1077,7 @@ void cancelAppointment(const Session& current) {
     char answer = readChoice("\n  Cancel this appointment? (Y/N): ", "YN");
     if (answer == 'N') {
         cout << "\n  No changes made.\n";
+        pauseForKey();
         return;
     }
 
@@ -1091,6 +1087,7 @@ void cancelAppointment(const Session& current) {
     saveAppointments();
 
     cout << "\n  Appointment " << appointments[index].appointmentID << " cancelled.\n";
+    pauseForKey();
 }
 
 static void assignDentist(const Session& current) {
@@ -1109,6 +1106,7 @@ static void assignDentist(const Session& current) {
     saveAppointments();
 
     cout << "\n  " << chosen << " assigned to " << target.appointmentID << ".\n";
+    pauseForKey();
 }
 
 static void displayScheduleGrid() {
@@ -1213,6 +1211,7 @@ void findNextAvailable() {
 static void appointmentMenuReception(const Session& current) {
     int choice;
     do {
+        clearScreen();
         printModuleHeader("Appointments - Reception (" + current.name + ")");
         cout << "\n  1. Schedule an appointment for a patient\n";
         cout << "  2. View all appointments\n";
@@ -1243,6 +1242,7 @@ static void appointmentMenuReception(const Session& current) {
 static void appointmentMenuDentist(const Session& current) {
     int choice;
     do {
+        clearScreen();
         printModuleHeader("My Schedule - " + current.name);
         cout << "\n  1. View my appointments\n";
         cout << "  2. Two-week schedule grid\n";
